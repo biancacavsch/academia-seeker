@@ -1,0 +1,520 @@
+# Academic Pipeline Configuration — História / Literatura / Gótico / Terror
+# Perfil: História, História da Literatura, História da/na América Latina,
+# Literatura Latino-Americana, Gótico, Terror/Horror e afins.
+# Pipeline separado do job-pipeline (uso próprio da namorada).
+# Bolsa: já está no mestrado → programas de mestrado puro são rejeitados.
+
+sources: []  # não há fontes de vagas neste pipeline (academic-only)
+
+# ================= Fontes acadêmicas (CFPs, eventos, bolsas) =================
+academic_sources:
+  # --- UPenn Call for Papers (humanidades) ---
+  - name: upenn_cfp
+    enabled: true
+    type: html
+    url: "https://call-for-papers.sas.upenn.edu"
+    category: "publicacao"
+    rate_limit: 3.0
+    params:
+      categories:
+        - "history"
+        - "latin-american-history"
+        - "literature"
+        - "comparative-literature"
+        - "spanish-and-portuguese"
+        - "gothic-studies"
+      max_pages: 3
+
+  # --- WikiCFP ---
+  - name: wikicfp
+    enabled: true
+    type: rss
+    url: "https://wikicfp.com/cfp/servlet/event.showcfp?feed=rss"
+    category: "cfp"
+    rate_limit: 3.0
+    params:
+      categories: ["history", "literature", "philosophy", "humanities", "spanish", "portuguese"]
+
+  # --- H-Net Announcements (história, literatura, LatAm) ---
+  - name: hnet_announcements
+    enabled: true
+    type: rss
+    url: "https://networks.h-net.org/rss/announcements"
+    category: "event"
+    rate_limit: 3.0
+    params:
+      keywords: ["history", "historia", "história", "literature", "literatura",
+                 "latin america", "américa latina", "latinoamérica",
+                 "gothic", "gótico", "terror", "horror",
+                 "colonial", "colonialismo", "pós-colonial",
+                 "literatura latino-americana", "latin american literature"]
+
+  # --- Euraxess (bolsas/pesquisa Europa) ---
+  - name: euraxess
+    enabled: true
+    type: rss
+    url: "https://euraxess.ec.europa.eu/job-feed"
+    category: "bolsa"
+    rate_limit: 3.0
+
+  # --- PhilPapers CFP (filosofia/literatura) ---
+  - name: philpapers_cfp
+    enabled: true
+    type: rss
+    url: "https://philpapers.org/rss/cfp/"
+    category: "cfp"
+    rate_limit: 3.0
+
+  # --- Scraping genérico (adicione fontes aqui) ---
+  # Exemplo:
+  # - name: minha_fonte_custom
+  #   enabled: false
+  #   type: html
+  #   url: "https://exemplo.com/cfps"
+  #   category: "cfp"
+  #   rate_limit: 5.0
+
+# ================= Busca web acadêmica (história/literatura/LatAm/gótico/terror) =================
+academic_search:
+  enabled: true
+  engines: ["ddgs", "marginalia"]
+  timelimit: "m"
+  max_results_per_query: 10
+  page_budget: 100
+  request_delay: 2.0
+  exclude_domains:
+    - "linkedin.com"
+    - "facebook.com"
+    - "instagram.com"
+    - "twitter.com"
+    - "x.com"
+    - "tiktok.com"
+    - "wikipedia.org"
+    - "youtube.com"
+  queries:
+    # História (PT/EN/ES)
+    historia_pt:
+      - "chamada de artigos história"
+      - "chamada de trabalhos história"
+      - "edital bolsa pesquisa história"
+      - "congresso história 2027"
+      - "CFP história brasileira"
+      - "chamada capítulos história"
+    historia_en:
+      - "call for papers history"
+      - "CFP history conference 2027"
+      - "history fellowship research"
+      - "call for papers colonial history"
+      - "history journal special issue"
+    historia_es:
+      - "convocatoria artículos historia"
+      - "convocatoria congreso historia"
+      - "beca investigación historia"
+      - "convocatoria historia latinoamericana"
+
+    # História da Literatura
+    historia_literatura_pt:
+      - "chamada de artigos história da literatura"
+      - "chamada de trabalhos literatura brasileira"
+      - "edital bolsa pesquisa literatura"
+      - "congresso literatura brasileira 2027"
+      - "CFP literatura brasileira"
+    historia_literatura_en:
+      - "call for papers history of literature"
+      - "CFP literary history"
+      - "call for papers Brazilian literature"
+      - "literature conference 2027 CFP"
+    historia_literatura_es:
+      - "convocatoria artículos historia de la literatura"
+      - "convocatoria congreso literatura"
+      - "beca investigación literatura"
+
+    # História da/na América Latina
+    america_latina_pt:
+      - "chamada de artigos América Latina"
+      - "chamada de trabalhos história América Latina"
+      - "edital bolsa pesquisa América Latina"
+      - "congresso história América Latina 2027"
+      - "CFP América Latina humanidades"
+    america_latina_en:
+      - "call for papers Latin America history"
+      - "CFP Latin American history conference"
+      - "call for papers Latin America literature"
+      - "Latin American studies conference 2027"
+    america_latina_es:
+      - "convocatoria artículos América Latina"
+      - "convocatoria congreso historia América Latina"
+      - "beca investigación América Latina"
+      - "convocatoria historia latinoamericana"
+
+    # Literatura Latino-Americana
+    literatura_latina_pt:
+      - "chamada de artigos literatura latino-americana"
+      - "chamada de trabalhos literatura latino americana"
+      - "edital bolsa pesquisa literatura latino-americana"
+      - "congresso literatura latino-americana 2027"
+      - "CFP literatura latino americana"
+    literatura_latina_en:
+      - "call for papers Latin American literature"
+      - "CFP Latin American literature conference"
+      - "call for papers Latino literature"
+      - "Latin American literature journal special issue"
+    literatura_latina_es:
+      - "convocatoria artículos literatura latinoamericana"
+      - "convocatoria congreso literatura latinoamericana"
+      - "beca investigación literatura latinoamericana"
+
+    # Gótico / Terror / Horror
+    gotico_pt:
+      - "chamada de artigos gótico"
+      - "chamada de trabalhos gótico horror"
+      - "edital bolsa pesquisa gótico terror"
+      - "congresso gótico terror 2027"
+      - "CFP gótico terror horror"
+    gotico_en:
+      - "call for papers gothic"
+      - "CFP gothic studies conference"
+      - "call for papers horror"
+      - "CFP horror studies"
+      - "gothic literature conference 2027"
+      - "horror fiction call for papers"
+    gotico_es:
+      - "convocatoria artículos gótico"
+      - "convocatoria congreso gótico terror"
+      - "beca investigación gótico terror"
+
+# ================= Filtros rígidos =================
+filters:
+  languages: ["en", "pt", "es"]
+  min_score_alert: 60
+  min_score_digest: 40
+  max_job_age_days: 30
+
+  # Áreas EXCLUÍDAS — rejeita mesmo que bata com termo de interesse
+  exclude_areas:
+    - "vaga"
+    - "estágio"
+    - "estagio"
+    - "internship"
+    - "trainee"
+    - "emprego"
+    - "trabalho"
+    - "job"
+    - "contrata"
+    - "seleciona funcionário"
+    - "sales"
+    - "vendedor"
+    - "atendimento"
+    - "suporte"
+    - "customer support"
+    - "call center"
+
+  # Palavras de interesse acadêmico (título) — permite focar no escopo dela
+  interests:
+    - "história"
+    - "history"
+    - "historia"
+    - "literatura"
+    - "literature"
+    - "literatura latino-americana"
+    - "latin american literature"
+    - "literatura latino americana"
+    - "américa latina"
+    - "latin america"
+    - "latinoamérica"
+    - "gótico"
+    - "gothic"
+    - "gótico"
+    - "terror"
+    - "horror"
+    - "horror"
+    - "chamada de artigos"
+    - "call for papers"
+    - "convocatoria"
+    - "cfp"
+    - "congresso"
+    - "conference"
+    - "congreso"
+    - "simpósio"
+    - "symposium"
+    - "bolsa"
+    - "fellowship"
+    - "grant"
+    - "edital"
+    - "mestrado"
+    - "doutorado"
+    - "pos-graduação"
+    - "posgrado"
+
+# ================= Keywords para scoring (EN/PT/ES) — pesos relativos =================
+keywords:
+  high_weight: 40   # título
+  medium_weight: 25 # tags/descrição
+  low_weight: 15    # fit formação
+  cfp_weight: 20    # CFP-specific terms
+  negative_weight: -30
+
+  # CFP specific terms
+  cfp_specific:
+    - "call for papers"
+    - "chamada de artigos"
+    - "convocatoria de articulos"
+    - "call for contributions"
+    - "call for abstracts"
+    - "submission deadline"
+    - "prazo de submissão"
+    - "plazo de envio"
+    - "paper submission"
+    - "submissão de artigo"
+    - "envio de artigo"
+    - "abstract submission"
+    - "submissão de resumo"
+    - "conference proceedings"
+    - "anais de conferência"
+    - "special issue"
+    - "edição especial"
+    - "numero especial"
+    - "journal special issue"
+    - "workshop proposal"
+    - "proposta de workshop"
+    - "panel proposal"
+    - "proposta de painel"
+
+  # Fit formação (mestrado/doutorado/pesquisa)
+  education_fit:
+    - "social sciences"
+    - "social science"
+    - "ciências sociais"
+    - "ciencias sociales"
+    - "humanities"
+    - "humanidades"
+    - "mestrado"
+    - "maestría"
+    - "masters student"
+    - "estudante de mestrado"
+    - "estudiante de maestría"
+    - "graduate student"
+    - "pós-graduação"
+    - "pos-graduacao"
+    - "posgrado"
+    - "any degree"
+    - "qualquer formação"
+    - "cualquier titulación"
+    - "early career"
+    - "início de carreira"
+    - "jovem pesquisador"
+    - "young researcher"
+
+  # Termos nucleares simples (alto recall, peso médio/baixo)
+  broad:
+    - "history"
+    - "historian"
+    - "história"
+    - "historia"
+    - "historiador"
+    - "historiadora"
+    - "museum"
+    - "museums"
+    - "museu"
+    - "museus"
+    - "museo"
+    - "museos"
+    - "archive"
+    - "archives"
+    - "archivist"
+    - "arquivo"
+    - "arquivos"
+    - "arquivista"
+    - "archivo"
+    - "archivos"
+    - "library"
+    - "libraries"
+    - "librarian"
+    - "biblioteca"
+    - "bibliotecas"
+    - "bibliotecário"
+    - "bibliotecario"
+    - "curator"
+    - "curatorial"
+    - "curador"
+    - "curadora"
+    - "heritage"
+    - "patrimônio"
+    - "patrimonio"
+    - "cultural"
+    - "writer"
+    - "editor"
+    - "editorial"
+    - "journalist"
+    - "journalism"
+    - "redator"
+    - "periodista"
+    - "researcher"
+    - "pesquisador"
+    - "pesquisadora"
+    - "investigador"
+    - "investigadora"
+    - "research assistant"
+    - "research associate"
+    - "assistente de pesquisa"
+    - "asistente de investigación"
+    - "phd"
+    - "doctoral"
+    - "doctorate"
+    - "postdoc"
+    - "doutorado"
+    - "doctorado"
+    - "anthropology"
+    - "sociology"
+    - "philosophy"
+    - "antropologia"
+    - "sociologia"
+    - "filosofia"
+    - "antropología"
+    - "sociología"
+    - "filosofía"
+    - "education"
+    - "educator"
+    - "educação"
+    - "educador"
+    - "educación"
+    - "educadora"
+
+  # Gótico / Terror / Horror
+  gothic_horror:
+    - "gothic"
+    - "gótico"
+    - "gótica"
+    - "gothic studies"
+    - "estudos góticos"
+    - "estudios góticos"
+    - "gothic literature"
+    - "literatura gótica"
+    - "literatura gotica"
+    - "horror"
+    - "terror"
+    - "horror studies"
+    - "estudos de terror"
+    - "estudios de terror"
+    - "horror fiction"
+    - "ficção de terror"
+    - "ficción de terror"
+    - "gothic novel"
+    - "romance gótico"
+    - "novela gótica"
+    - "gothic horror"
+    - "terror gótico"
+    - "horror gótico"
+
+  # História da Literatura / Literatura Latino-Americana
+  literatura_latina:
+    - "literatura latino-americana"
+    - "latin american literature"
+    - "literatura latino americana"
+    - "literatura latinoamericana"
+    - "história da literatura"
+    - "history of literature"
+    - "historia de la literatura"
+    - "história literária"
+    - "literary history"
+    - "historia literaria"
+    - "literatura brasileira"
+    - "brazilian literature"
+    - "literatura portuguesa"
+    - "portuguese literature"
+    - "literatura hispanoamericana"
+    - "hispanic american literature"
+
+  # História da/na América Latina
+  america_latina:
+    - "américa latina"
+    - "latin america"
+    - "latinoamérica"
+    - "história da américa latina"
+    - "history of latin america"
+    - "historia de américa latina"
+    - "historia de latinoamérica"
+    - "colonial latin america"
+    - "américa latina colonial"
+    - "latinoamérica colonial"
+    - "pós-colonial"
+    - "postcolonial"
+    - "poscolonial"
+
+  # Core DH (vazio — pipeline acadêmico-only)
+  core: []
+
+  # Divulgação Científica (vazio — pipeline acadêmico-only)
+  scicomm: []
+
+  # GLAM (vazio — pipeline acadêmico-only)
+  glam: []
+
+  # Filosofia da tecnologia (vazio — pipeline acadêmico-only)
+  philosophy_tech: []
+
+  # Digital Humanities (vazio — pipeline acadêmico-only)
+  digital_humanities: []
+
+  # Estágio / Internship (não usado — pipeline acadêmico-only)
+  estagio: []
+
+  # Negativos (falsos positivos comuns)
+  negatives:
+    - "vaga"
+    - "estágio"
+    - "estagio"
+    - "internship"
+    - "trainee"
+    - "emprego"
+    - "trabalho"
+    - "job"
+    - "contrata"
+    - "sales"
+    - "vendedor"
+    - "atendimento"
+    - "suporte"
+    - "customer support"
+    - "call center"
+    - "senior developer"
+    - "senior engineer"
+    - "backend"
+    - "frontend"
+    - "fullstack"
+    - "devops"
+    - "software engineer"
+    - "software developer"
+    - "programmer"
+    - "nurse"
+    - "nursing"
+    - "enfermeiro"
+    - "enfermera"
+    - "data entry"
+    - "telemarketing"
+
+# ================= Alertas =================
+alerts:
+  telegram:
+    enabled: true  # defina true + configure bot_token/chat_id em .env
+    bot_token: "SEU_BOT_TOKEN_AQUI"
+    chat_id: "SEU_CHAT_ID_AQUI"
+  email:
+    enabled: true  # defina true + configure SMTP em .env
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_user: "SEU_EMAIL@gmail.com"
+    smtp_pass: "SUA_SENHA_DE_APP"
+    from_email: "SEU_EMAIL@gmail.com"
+    to_email: "EMAIL_DE_DESTINO@gmail.com"
+
+# ================= Armazenamento (apenas banco acadêmico) =================
+storage:
+  db_path_academic: "academic.db"  # bolsas/eventos/chamadas
+  db_path: "academic.db"           # fallback
+  dedup_by: "url_hash"
+
+# ================= Execução =================
+runtime:
+  user_agent: "Mozilla/5.0 (compatible; AcademicPipeline/1.0; +https://github.com)"
+  timeout: 30
+  max_retries: 3

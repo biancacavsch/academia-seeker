@@ -1,0 +1,219 @@
+# Scraper Configuration for Dynamic Sites (Playwright)
+# Adicione/edite/remova fontes aqui sem tocar no código Python
+# Cada fonte define: seletores, paginação, filtros, etc.
+
+scrapers:
+  # EURAXESS - Jobs para pesquisadores na Europa
+  - name: "euraxess"
+    enabled: true
+    base_url: "https://euraxess.ec.europa.eu/jobs/search"
+    type: "playwright"
+    rate_limit: 3.0
+    # Parâmetros de busca (query string)
+    search_params:
+      keywords: "digital humanities OR science communication OR cultural heritage OR digital scholarship"
+      # country: ""  # deixe vazio para global
+      # research_field: ""
+      # researcher_profile: "R1,R2"  # First Stage, Recognised
+    # Seletores CSS/XPath
+    selectors:
+      job_list: "div.views-row"  # container de cada vaga
+      title: "h3 a, h2 a, .job-title a"
+      company: ".field-name-field-employer, .employer, .organisation"
+      location: ".field-name-field-location, .location, .country"
+      url: "h3 a, h2 a, .job-title a"
+      description: ".field-name-body, .description, .job-description"
+      posted_date: ".field-name-field-deadline, .deadline, .posted-date"
+      tags: ".field-name-field-keywords a, .tags a, .keywords a"
+    # Paginação
+    pagination:
+      type: "next_button"
+      next_selector: "li.pager-next a, a.next, .pager-next a"
+      max_pages: 5
+    # Filtros pós-coleta
+    filters:
+      remote_keywords: ["remote", "anywhere", "worldwide", "teletrabalho", "remoto", "distancia"]
+      require_remote: false  # EURAXESS tem muitas presenciais
+      min_score: 30
+
+  # HigherEdJobs - Vagas em ensino superior (EUA foco)
+  - name: "higheredjobs"
+    enabled: true
+    base_url: "https://www.higheredjobs.com/search.cfm"
+    type: "playwright"
+    rate_limit: 2.0
+    search_params:
+      Keywords: "digital humanities science communication cultural heritage"
+      JobCat: "34"  # Libraries/Information Science
+      # Remote: "1"  # se tiver filtro remote
+    selectors:
+      job_list: "div.jobResult"
+      title: ".jobTitle a"
+      company: ".collegeName"
+      location: ".location"
+      url: ".jobTitle a"
+      description: ".jobDescription"
+      posted_date: ".postedDate"
+      tags: ".jobTags a"
+    pagination:
+      type: "next_button"
+      next_selector: "a.nextPage, li.next a"
+      max_pages: 3
+    filters:
+      remote_keywords: ["remote", "virtual", "anywhere", "distance"]
+      require_remote: true
+      min_score: 30
+
+  # HERC - Higher Education Recruitment Consortium
+  - name: "hercjobs"
+    enabled: true
+    base_url: "https://www.hercjobs.org/search/"
+    type: "playwright"
+    rate_limit: 2.0
+    search_params:
+      keyword: "digital humanities OR science communication OR digital scholarship"
+      category: "Library/Information Science"
+    selectors:
+      job_list: ".job-listing, .search-result-item"
+      title: ".job-title a, h3 a"
+      company: ".institution-name, .employer"
+      location: ".location, .job-location"
+      url: ".job-title a, h3 a"
+      description: ".description, .job-description"
+      posted_date: ".posted-date, .date-posted"
+      tags: ".tags a, .categories a"
+    pagination:
+      type: "next_button"
+      next_selector: ".pagination .next a, a.next-page"
+      max_pages: 3
+    filters:
+      remote_keywords: ["remote", "virtual", "telecommute", "anywhere"]
+      require_remote: true
+      min_score: 30
+
+  # Jobs.ac.uk - UK academic jobs
+  - name: "jobs_ac_uk"
+    enabled: true
+    base_url: "https://www.jobs.ac.uk/search"
+    type: "playwright"
+    rate_limit: 2.0
+    search_params:
+      keywords: "digital humanities science communication cultural heritage"
+      category: "Library, Information & Knowledge Management"
+      location: "Anywhere"  # para remote
+    selectors:
+      job_list: ".job-result, .search-result"
+      title: ".job-title a, h3 a"
+      company: ".employer-name, .institution"
+      location: ".location"
+      url: ".job-title a, h3 a"
+      description: ".description, .job-description"
+      posted_date: ".posted-date, .date"
+      tags: ".tags a, .sectors a"
+    pagination:
+      type: "url_param"
+      page_param: "page"
+      max_pages: 3
+    filters:
+      remote_keywords: ["remote", "homeworking", "anywhere", "flexible location"]
+      require_remote: true
+      min_score: 30
+
+  # AcademicTransfer - NL/BE academic jobs
+  - name: "academictransfer"
+    enabled: true
+    base_url: "https://www.academictransfer.com/en/search"
+    type: "playwright"
+    rate_limit: 2.0
+    search_params:
+      keyword: "digital humanities OR science communication"
+      category: "Library & Information Science"
+    selectors:
+      job_list: ".vacancy-item, .job-item"
+      title: ".vacancy-title a, h3 a"
+      company: ".organisation, .employer"
+      location: ".location"
+      url: ".vacancy-title a, h3 a"
+      description: ".description, .vacancy-description"
+      posted_date: ".publication-date, .date"
+      tags: ".tags a, .disciplines a"
+    pagination:
+      type: "next_button"
+      next_selector: ".pagination .next a, a.next"
+      max_pages: 3
+    filters:
+      remote_keywords: ["remote", "thuiswerken", "anywhere", "flexibel"]
+      require_remote: true
+      min_score: 30
+
+  # Inside Higher Ed Jobs
+  - name: "insidehighered"
+    enabled: true
+    base_url: "https://jobs.insidehighered.com/search"
+    type: "playwright"
+    rate_limit: 2.0
+    search_params:
+      keywords: "digital humanities science communication"
+      category: "Library Science"
+    selectors:
+      job_list: ".job-listing, .result-item"
+      title: ".job-title a, h2 a"
+      company: ".employer, .institution"
+      location: ".location"
+      url: ".job-title a, h2 a"
+      description: ".description, .snippet"
+      posted_date: ".posted-date"
+      tags: ".tags a"
+    pagination:
+      type: "next_button"
+      next_selector: ".pagination .next a"
+      max_pages: 3
+    filters:
+      remote_keywords: ["remote", "virtual", "anywhere"]
+      require_remote: true
+      min_score: 30
+
+  # Academic Jobs Online (global aggregator)
+  - name: "academicjobsonline"
+    enabled: true
+    base_url: "https://academicjobsonline.org/ajo/jobs"
+    type: "playwright"
+    rate_limit: 2.0
+    search_params:
+      search: "digital humanities science communication"
+    selectors:
+      job_list: ".job_ad, tr.job"
+      title: ".title a, .job_title a"
+      company: ".institution, .employer"
+      location: ".location"
+      url: ".title a, .job_title a"
+      description: ".description, .abstract"
+      posted_date: ".posted, .date"
+      tags: ".fields a, .subjects a"
+    pagination:
+      type: "next_button"
+      next_selector: ".next a, a.next"
+      max_pages: 3
+    filters:
+      remote_keywords: ["remote", "anywhere", "virtual"]
+      require_remote: true
+      min_score: 30
+
+
+# Configurações globais do Playwright
+playwright:
+  headless: true
+  timeout: 30000
+  wait_until: "networkidle"
+  # User agent customizado
+  user_agent: "Mozilla/5.0 (compatible; JobPipeline/1.0; +https://github.com)"
+  # Viewport
+  viewport:
+    width: 1280
+    height: 720
+  # Bloquear recursos desnecessários para velocidade
+  block_resources:
+    - "image"
+    - "stylesheet"
+    - "font"
+    - "media"

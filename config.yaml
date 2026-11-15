@@ -1,0 +1,1053 @@
+# Job Pipeline Configuration
+# Perfil: Ciências Sociais + Mestrado em Divulgação Científica/Cultural + Humanidades Digitais
+
+sources:
+  # APIs gratuitas sem auth
+  - name: arbeitnow
+    enabled: true
+    type: api
+    base_url: "https://www.arbeitnow.com/api/job-board-api"
+    params:
+      remote: true
+      max_pages: 3
+    rate_limit: 1.0  # segundos entre requests
+
+  - name: remotive
+    enabled: true
+    type: api
+    base_url: "https://remotive.com/api/remote-jobs"
+    params:
+      max_pages: 5
+    rate_limit: 1.0
+
+  - name: remotejobs_org
+    enabled: true
+    type: api
+    base_url: "https://remotejobs.org/api/v1/jobs"
+    params:
+      limit: 50
+      max_pages: 3
+    rate_limit: 1.0
+
+  # APIs com chave free (configure no .env)
+  - name: adzuna
+    enabled: true
+    type: api
+    base_url: "https://api.adzuna.com/v1/api/jobs"
+    params:
+      countries: ["br", "us", "gb", "es"]
+      what_or: "humanities museum archives culture history education research writer"
+      results_per_page: 50
+      max_pages: 2
+    rate_limit: 2.0
+
+  - name: jooble
+    enabled: false  # habilite e configure JOOBLE_API_KEY no .env
+    type: api
+    base_url: "https://jooble.org/api"
+    params:
+      what: "digital humanities OR science communication OR cultural heritage"
+      where: "remote"
+      max_pages: 3
+    rate_limit: 2.0
+
+  # RSS feeds nichados DH
+  - name: dhnow_jobs
+    enabled: true
+    type: rss
+    url: "https://digitalhumanitiesnow.org/category/news/job/feed/"
+    rate_limit: 2.0
+
+  - name: archives_gig_dh
+    enabled: true
+    type: rss
+    url: "https://archivesgig.com/tag/digital-humanities/feed/"
+    rate_limit: 2.0
+
+  # Vagas de pesquisa na Europa (RSS oficial; maioria presencial — filtro remote_only aplica)
+  - name: euraxess
+    enabled: true
+    type: rss
+    url: "https://euraxess.ec.europa.eu/job-feed"
+    rate_limit: 2.0
+
+  # ===== Estágios remotos / home office =====
+  # Adzuna com termos de estágio (API já funcional com chaves no .env)
+  # NOTA: "pt" NÃO é país válido na API Adzuna (404) — só códigos ISO de país
+  - name: adzuna_estagio
+    enabled: true
+    type: api
+    kind: estagio
+    base_url: "https://api.adzuna.com/v1/api/jobs"
+    params:
+      countries: ["br", "us", "gb", "es"]
+      what_or: "estágio estagio internship trainee jovem aprendiz"
+      results_per_page: 50
+      max_pages: 2
+    rate_limit: 2.0
+
+  # Busca web por estágios (ddgs) — cobertura BR + internacional
+  - name: estagio_search
+    enabled: true
+    type: search
+    kind: estagio
+    rate_limit: 2.0
+
+  # Vagas.com.br (listagem HTML de estágio home office — httpx+bs4, sem Playwright)
+  - name: vagas_estagio
+    enabled: true
+    type: html_job
+    kind: estagio
+    url: "https://www.vagas.com.br/vagas-de-estagio-home-office"
+    rate_limit: 3.0
+    params:
+      selector: "li.vaga"
+      title_selector: "h2.cargo a"
+      link_selector: "h2.cargo a"
+      description_selector: ".detalhes p"
+      company_selector: ".emprVaga"
+      location_selector: ".vaga-local"
+      remote: true            # listagem já é de home office
+      resolve_direct: true    # baixa página da vaga e extrai link Gupy/empresa
+      max_pages: 2
+
+  # Catho (listagem de estágio home office — HTML estável, httpx+bs4)
+  - name: catho_estagio
+    enabled: true
+    type: html_job
+    kind: estagio
+    url: "https://www.catho.com.br/vagas/estagio-home-office/"
+    rate_limit: 3.0
+    params:
+      selector: "article.offer"
+      title_selector: "h2.title_offer a"
+      link_selector: "h2.title_offer a"
+      company_selector: "p.mb-2 .text-12"
+      location_selector: "p .i_job_location"
+      remote: true            # listagem já é de home office
+      resolve_direct: true    # baixa página da vaga e extrai link empresa
+      max_pages: 2
+
+  # 99jobs (busca de estágio — títulos truncados no listing, páginas individuais completas)
+  - name: jobs99_estagio
+    enabled: true
+    type: html_job
+    kind: estagio
+    url: "https://99jobs.com/busca?termo=estagio"
+    rate_limit: 3.0
+    params:
+      selector: "a.new-opportunity-card"
+      title_selector: "h1"
+      description_selector: ".opportunity-labels"
+      company_selector: ".new-opportunity-card-footer"
+      remote: false           # detecta "Remoto"/"Presencial" nos labels
+      resolve_direct: true
+      max_pages: 1            # page=2 redireciona para a home (repete cards)
+
+  # Busca por empresa-alvo (Gupy/LinkedIn/Indeed via site:) — links diretos
+  - name: empresas_alvo
+    enabled: true
+    type: search
+    kind: estagio
+    rate_limit: 2.0
+
+  # Feed RSS de vagas (era fonte acadêmica; category=job exige grupo `sources`
+  # para ir a jobs.db e ser alertado pelo `jobs alert` — academic alert ignora job)
+  - name: code4lib_jobs
+    enabled: true
+    type: rss
+    url: "https://jobs.code4lib.org/feed/"
+    category: "job"
+    rate_limit: 2.0
+
+# Call for Papers / Eventos Acadêmicos
+# Fontes para CFPs, conferências, workshops em filosofia/humanidades da tecnologia
+academic_sources:
+  - name: upenn_cfp
+    enabled: true
+    type: html
+    url: "https://call-for-papers.sas.upenn.edu"
+    category: "publicacao"
+    rate_limit: 3.0
+    params:
+      # Slugs de categoria do site UPenn (adicionar mais conforme necessário)
+      categories:
+        - "humanities-computing-and-the-internet"
+        - "science-and-culture"
+      max_pages: 3
+
+  - name: wikicfp
+    enabled: true
+    type: rss
+    url: "https://wikicfp.com/cfp/servlet/event.showcfp?feed=rss"
+    category: "cfp"
+    rate_limit: 3.0
+    params:
+      # WikiCFP permite filtrar por categoria via URL
+      # Categorias relevantes: philosophy, humanities, digital-humanities, technology
+      categories: ["philosophy", "humanities", "digital-humanities", "technology", "social-sciences", "education"]
+
+  - name: hnet_announcements
+    enabled: true
+    type: rss
+    url: "https://networks.h-net.org/rss/announcements"
+    category: "event"
+    rate_limit: 3.0
+    params:
+      keywords: ["digital humanities", "philosophy of technology", "science communication", "public humanities", "digital scholarship", "cultural heritage", "history of technology", "media studies", "critical theory"]
+
+  - name: dhnow_cfps
+    enabled: true
+    type: rss
+    url: "https://digitalhumanitiesnow.org/category/news/cfp/feed/"
+    category: "cfp"
+    rate_limit: 2.0
+
+  - name: dhnow_conferences
+    enabled: true
+    type: rss
+    url: "https://digitalhumanitiesnow.org/category/news/conference/feed/"
+    category: "event"
+    rate_limit: 2.0
+
+  - name: philpapers_cfp
+    enabled: true
+    type: rss
+    url: "https://philpapers.org/rss/cfp/"
+    category: "cfp"
+    rate_limit: 3.0
+
+  - name: ala_techsource
+    enabled: true
+    type: rss
+    url: "https://www.ala.org/tools/feed/rss/technology"
+    category: "event"
+    rate_limit: 3.0
+
+  - name: dhsi_cfps
+    enabled: true
+    type: html
+    url: "https://dhsi.org/cfps/"
+    category: "cfp"
+    rate_limit: 5.0
+    params:
+      selector: "article, .post, .entry, .cfp-item"
+      title_selector: "h1, h2, h3, .entry-title, .post-title"
+      link_selector: "a"
+      date_selector: "time, .date, .published"
+      description_selector: ".entry-content, .post-content, .excerpt"
+
+  - name: ach_announcements
+    enabled: true
+    type: html
+    url: "https://ach.org/category/announcements/"
+    category: "event"
+    rate_limit: 5.0
+    params:
+      selector: "article, .post, .entry"
+      title_selector: "h1, h2, h3, .entry-title"
+      link_selector: "a"
+      date_selector: "time, .date"
+      description_selector: ".entry-content, .excerpt"
+
+  # Scraping configurável genérico - adicione suas fontes aqui
+  # Exemplo:
+  # - name: minha_fonte_custom
+  #   enabled: false
+  #   type: html
+  #   url: "https://exemplo.com/cfps"
+  #   category: "cfp"
+  #   rate_limit: 5.0
+  #   params:
+  #     selector: ".item, .post, article"
+  #     title_selector: "h2 a, h3 a, .title a"
+  #     link_selector: "a"
+  #     date_selector: ".date, time"
+  #     description_selector: ".content, .excerpt, p"
+
+# Busca web acadêmica (só trilhos bolsa/publicacao/evento — sem vagas)
+# Motores: ddgs (lib FOSS, sem chave) + marginalia (API pública free)
+academic_search:
+  enabled: true
+  engines: ["ddgs", "marginalia"]
+  timelimit: "m"          # ddgs: d|w|m|y (alinhado à política de 30 dias)
+  max_results_per_query: 10
+  page_budget: 100        # teto de páginas baixadas por rodada
+  request_delay: 2.0      # segundos entre downloads (educação com os sites)
+  exclude_domains:
+    - "linkedin.com"
+    - "facebook.com"
+    - "instagram.com"
+    - "twitter.com"
+    - "x.com"
+    - "tiktok.com"
+    - "wikipedia.org"
+    - "youtube.com"
+  queries:
+    bolsas_pt:
+      - "edital bolsa mestrado humanidades"
+      - "bolsa mestrado humanidades tecnologia"
+      - "edital bolsa pesquisa divulgação científica"
+      - "bolsa intercâmbio mestrado humanidades"
+      - "bolsa sanduíche mestrado"
+      - "edital bolsa mestrado sociologia filosofia"
+      - "bolsa mestrado FAPESP humanidades"
+      - "edital PIBIC iniciação científica humanidades"
+      - "edital bolsa CAPES humanidades"
+      - "bolsa pesquisa CNPq humanidades digitais"
+      - "edital auxílio pesquisa FAPERJ humanidades"
+    bolsas_en:
+      - "digital humanities fellowship master"
+      - "master scholarship humanities technology"
+      - "philosophy of technology fellowship"
+      - "humanities master exchange scholarship"
+      - "science communication fellowship"
+      - "humanities research fellowship 2027"
+      - "digital heritage research grant"
+    bolsas_es:
+      - "beca maestría humanidades"
+      - "beca investigación humanidades digitales"
+      - "beca intercambio maestría"
+      - "convocatoria beca filosofía tecnología"
+      - "beca latinoamericana humanidades digitales"
+      - "convocatoria beca ciencias sociales Latinoamérica"
+    publicacoes_pt:
+      - "chamada de artigos humanidades digitais"
+      - "chamada de trabalhos filosofia tecnologia"
+      - "dossiê revista humanidades tecnologia"
+      - "chamada de capítulos sociologia tecnologia"
+      - "Intercom chamada de trabalhos"
+      - "ANPOCS chamada de trabalhos"
+      - "SBPC chamada de trabalhos"
+      - "chamada de trabalhos comunicação redes sociais"
+      - "chamada de artigos comunicação cibercultura"
+      - "chamada de participação humanidades digitais Brasil"
+    publicacoes_en:
+      - "call for papers digital humanities"
+      - "call for papers philosophy of technology"
+      - "CFP sociology of technology"
+      - "special issue science communication journal"
+      - "call for panels digital humanities 2027"
+      - "CFP cultural heritage digital"
+    publicacoes_es:
+      - "convocatoria artículos humanidades digitales"
+      - "convocatoria trabajos filosofía tecnología"
+      - "convocatoria ponencias comunicación digital"
+      - "convocatoria dossiê revista humanidades"
+    eventos_pt:
+      - "congresso filosofia tecnologia 2027"
+      - "evento humanidades digitais 2027"
+      - "workshop sociologia tecnologia"
+      - "seminário divulgação científica"
+      - "Intercom 2027 inscrições"
+      - "SBPC reunião anual 2027"
+      - "ANPOCS reunião 2027"
+      - "seminário humanidades digitais 2027 Brasil"
+      - "festival de ciências humanas digitais 2027"
+    eventos_en:
+      - "digital humanities conference 2027"
+      - "philosophy of technology conference"
+      - "science communication conference 2027"
+      - "digital methods conference 2027"
+    eventos_es:
+      - "congreso humanidades digitales"
+      - "congreso filosofía tecnología"
+      - "congreso comunicación digital Latinoamérica 2027"
+      - "jornada ciencias sociales Latinoamérica 2027"
+
+# Busca web de estágios remotos (ddgs) — misturados com as demais vagas
+estagio_search:
+  enabled: true
+  engines: ["ddgs"]
+  timelimit: "m"          # ddgs: d|w|m|y
+  max_results_per_query: 8
+  page_budget: 40         # teto de páginas baixadas por rodada
+  request_delay: 2.0
+  exclude_domains:
+    - "linkedin.com"
+    - "facebook.com"
+    - "instagram.com"
+    - "twitter.com"
+    - "x.com"
+    - "tiktok.com"
+    - "wikipedia.org"
+    - "youtube.com"
+  # Consultas por idioma (pt → região br-pt, en → us-en)
+  queries:
+    pt:
+      - "estágio home office vaga"
+      - "vaga de estágio remoto"
+      - "estágio administrativo home office"
+      - "estágio marketing digital home office"
+      - "estágio redes sociais home office"
+      - "estágio monitoramento redes sociais"
+      - "estágio gestão de conteúdo home office"
+      - "estágio gestão de site home office"
+      - "estágio horário flexível home office"
+      - "estágio supervisionado remoto"
+      - "site:estagio.com.br home office"
+      - "site:vagas.com.br estágio home office"
+      - "site:catho.com.br estágio home office"
+      - "site:99jobs.com estágio remoto"
+      - "site:indeed.com.br estágio home office"
+      - "estágio comunicação digital remoto"
+      - "estágio criação de conteúdo home office"
+      - "estágio gestão de redes sociais remoto"
+      - "estágio marketing de conteúdo remoto vaga"
+    es:   # LatAm / Espanhol (região es-es)
+      - "pasantía remoto redes sociales"
+      - "prácticas profesionales comunicación remoto"
+      - "pasantía home office universitaria"
+      - "prácticas profesionales marketing digital remoto"
+    en:
+      - "remote internship social media"
+      - "remote internship marketing"
+      - "remote internship communications"
+      - "work from home internship"
+      - "remote internship digital humanities"
+      - "remote internship flexible hours student"
+      - "remote internship literature"
+      - "remote internship content creation"
+      - "remote internship science communication"
+      - "remote internship library archives"
+      - "remote internship social media marketing"
+
+# Busca por empresa-alvo (links diretos para Gupy/LinkedIn/Indeed)
+# Edite a lista de empresas conforme seu interesse
+empresas_alvo:
+  enabled: true
+  engines: ["ddgs"]
+  timelimit: "m"
+  max_results_per_query: 4
+  page_budget: 25
+  request_delay: 3.0          # pausa entre buscas (evita rate-limit do ddgs)
+  exclude_domains:
+    # linkedin.com NÃO está aqui de propósito: as queries site:linkedin.com/jobs
+    # retornam só páginas de vaga; is_job_page() rejeita perfil/busca/salário.
+    - "facebook.com"
+    - "instagram.com"
+    - "wikipedia.org"
+  empresas:
+    # Comunicação / redes sociais / conteúdo (seu perfil E-life)
+    - "Globo"
+    - "UOL"
+    - "Magazine Luiza"
+    - "Nubank"
+    - "iFood"
+    - "Hotmart"
+    - "Sympla"
+    - "Google"
+    # Marketing/design/remoto (fit estágio remoto)
+    - "Canva"
+    - "HubSpot"
+    - "TikTok"
+    # Cultura/educação (fit humanidades + divulgação)
+    - "Itaú Cultural"
+    - "Alura"
+  queries:
+    pt:
+      - "site:gupy.io {empresa} estágio remoto"
+      - "site:gupy.io {empresa} estágio home office"
+      - "site:linkedin.com/jobs {empresa} estágio remoto"
+      - "site:indeed.com.br {empresa} estágio"
+    en:
+      - "site:linkedin.com/jobs {empresa} remote internship"
+      - "site:indeed.com {empresa} remote internship"
+
+# Keywords para scoring (EN/PT/ES) — pesos relativos
+keywords:
+  high_weight: 40   # título
+  medium_weight: 25 # tags/descrição
+  low_weight: 15    # fit formação
+  cfp_weight: 20    # CFP-specific terms
+  negative_weight: -30
+
+  # Core DH / Humanidades Digitais
+  core:
+    - "digital humanities"
+    - "humanidades digitais"
+    - "humanidades digitales"
+    - "computational humanities"
+    - "humanidades computacionais"
+    - "digital scholarship"
+    - "bolsa digital"
+    - "humanidades tecnológicas"
+    - "tecnologias humanas"
+    - "digital heritage"
+    - "patrimônio digital"
+    - "patrimonio digital"
+    - "cultural heritage digital"
+    - "humanistic ai"
+    - "ia humanística"
+    - "computational social science"
+    - "ciências sociais computacionais"
+    - "ciencias sociales computacionales"
+    - "digital methods"
+    - "métodos digitais"
+
+  # Divulgação Científica / Science Communication
+  scicomm:
+    - "science communication"
+    - "divulgação científica"
+    - "divulgacao cientifica"
+    - "comunicação científica"
+    - "comunicacion cientifica"
+    - "science outreach"
+    - "public engagement science"
+    - "engajamento público ciência"
+    - "cultural dissemination"
+    - "divulgação cultural"
+    - "divulgacion cultural"
+    - "science writing"
+    - "escrita científica"
+    - "escritura cientifica"
+    - "scientific journalism"
+    - "jornalismo científico"
+    - "periodismo científico"
+    - "research communication"
+    - "comunicação de pesquisa"
+    - "comunicacion de investigacion"
+    - "open science"
+    - "ciência aberta"
+    - "ciencia abierta"
+    - "knowledge translation"
+    - "tradução do conhecimento"
+    - "public understanding of science"
+
+  # GLAM / Cultural Institutions
+  glam:
+    - "glam"
+    - "galleries libraries archives museums"
+    - "bibliotecas arquivos museus"
+    - "archives"
+    - "arquivos"
+    - "archivos"
+    - "digital curation"
+    - "curadoria digital"
+    - "curación digital"
+    - "digital preservation"
+    - "preservação digital"
+    - "preservacion digital"
+    - "metadata"
+    - "metadados"
+    - "cataloging"
+    - "catalogação"
+    - "catalogacion"
+    - "digital collections"
+    - "coleções digitais"
+    - "colecciones digitales"
+    - "cultural data"
+    - "dados culturais"
+    - "heritage data"
+
+  # Filosofia da tecnologia / Philosophy of technology
+  philosophy_tech:
+    - "philosophy of technology"
+    - "filosofia da tecnologia"
+    - "filosofia de la tecnología"
+    - "philosophy of science"
+    - "filosofia da ciência"
+    - "filosofia de la ciencia"
+    - "ethics of technology"
+    - "ética da tecnologia"
+    - "ética de la tecnología"
+    - "critical theory"
+    - "teoria crítica"
+    - "teoria critica"
+    - "phenomenology of technology"
+    - "fenomenologia da tecnologia"
+    - "posthumanism"
+    - "pós-humanismo"
+    - "poshumanismo"
+    - "technological mediation"
+    - "mediação tecnológica"
+    - "science and technology studies"
+    - "sts"
+    - "estudos ciência tecnologia"
+    - "tecnociencia"
+    - "technoscience"
+
+  # Digital Humanities specific (para CFPs/eventos)
+  digital_humanities:
+    - "digital humanities conference"
+    - "conferência humanidades digitais"
+    - "conferencia humanidades digitales"
+    - "dh conference"
+    - "dh workshop"
+    - "digital humanities workshop"
+    - "humanidades digitais workshop"
+    - "digital methods"
+    - "métodos digitais"
+    - "text analysis"
+    - "análise de texto"
+    - "text mining"
+    - "mineração de texto"
+    - "network analysis"
+    - "análise de redes"
+    - "spatial humanities"
+    - "humanidades espaciais"
+    - "cultural analytics"
+    - "analytics culturais"
+    - "computational literary studies"
+    - "estudos literários computacionais"
+    - "cultural heritage computing"
+    - "patrimônio cultural computacional"
+
+  # CFP specific terms
+  cfp_specific:
+    - "call for papers"
+    - "chamada de artigos"
+    - "convocatoria de articulos"
+    - "call for contributions"
+    - "call for abstracts"
+    - "submission deadline"
+    - "prazo de submissão"
+    - "plazo de envio"
+    - "paper submission"
+    - "submissão de artigo"
+    - "envio de artigo"
+    - "abstract submission"
+    - "submissão de resumo"
+    - "conference proceedings"
+    - "anais de conferência"
+    - "special issue"
+    - "edição especial"
+    - "numero especial"
+    - "journal special issue"
+    - "workshop proposal"
+    - "proposta de workshop"
+    - "panel proposal"
+    - "proposta de painel"
+
+  # Fit formação (Ciencias Sociais + Mestrado em andamento)
+  education_fit:
+    - "social sciences"
+    - "social science"
+    - "ciências sociais"
+    - "ciencias sociales"
+    - "humanities"
+    - "humanidades"
+    - "humanidades"
+    - "mestrado"
+    - "maestría"
+    - "masters student"
+    - "estudante de mestrado"
+    - "estudiante de maestría"
+    - "graduate student"
+    - "pós-graduação"
+    - "pos-graduacao"
+    - "posgrado"
+    - "any degree"
+    - "qualquer formação"
+    - "cualquier titulación"
+    - "early career"
+    - "início de carreira"
+    - "jovem pesquisador"
+    - "young researcher"
+
+  # Termos nucleares simples (alto recall, peso médio/baixo — precisão via threshold)
+  broad:
+    - "history"
+    - "historian"
+    - "história"
+    - "historia"
+    - "historiador"
+    - "historiadora"
+    - "museum"
+    - "museums"
+    - "museu"
+    - "museus"
+    - "museo"
+    - "museos"
+    - "archive"
+    - "archives"
+    - "archivist"
+    - "arquivo"
+    - "arquivos"
+    - "arquivista"
+    - "archivo"
+    - "archivos"
+    - "library"
+    - "libraries"
+    - "librarian"
+    - "biblioteca"
+    - "bibliotecas"
+    - "bibliotecário"
+    - "bibliotecario"
+    - "curator"
+    - "curatorial"
+    - "curador"
+    - "curadora"
+    - "heritage"
+    - "patrimônio"
+    - "patrimonio"
+    - "cultural"
+    - "writer"
+    - "editor"
+    - "editorial"
+    - "journalist"
+    - "journalism"
+    - "redator"
+    - "periodista"
+    - "researcher"
+    - "pesquisador"
+    - "pesquisadora"
+    - "investigador"
+    - "investigadora"
+    - "research assistant"
+    - "research associate"
+    - "assistente de pesquisa"
+    - "asistente de investigación"
+    - "phd"
+    - "doctoral"
+    - "doctorate"
+    - "postdoc"
+    - "doutorado"
+    - "doctorado"
+    - "anthropology"
+    - "sociology"
+    - "philosophy"
+    - "antropologia"
+    - "sociologia"
+    - "filosofia"
+    - "antropología"
+    - "sociología"
+    - "filosofía"
+    - "education"
+    - "educator"
+    - "educação"
+    - "educador"
+    - "educación"
+    - "educadora"
+    - "communications"
+    - "tutor"
+    - "tutoring"
+    - "investigador junior"
+
+  # Estágio / Internship (nível + perfil + compatibilidade com mestrado)
+  estagio:
+    - "estágio"
+    - "estagio"
+    - "estagiário"
+    - "estagiaria"
+    - "estagiária"
+    - "estagiário home office"
+    - "trainee"
+    - "aprendiz"
+    - "jovem aprendiz"
+    - "jovem talento"
+    - "internship"
+    - "intern position"
+    - "práticas profissionais"
+    - "prática profissional"
+    # Perfil (E-life: monitoramento redes sociais; site de extensão em literatura)
+    - "redes sociais"
+    - "mídias sociais"
+    - "social media"
+    - "monitoramento"
+    - "literatura"
+    - "projeto de extensão"
+    - "extensão universitária"
+    - "gestão de site"
+    - "gestão de conteúdo"
+    - "wordpress"
+    - "website"
+    - "conteúdo digital"
+    # Compatível com mestrado/pesquisa (home office + horário flexível)
+    - "home office"
+    - "remoto"
+    - "remote"
+    - "trabalho remoto"
+    - "horário flexível"
+    - "horario flexivel"
+    - "flexible hours"
+    - "compatível com estudo"
+    - "compatível com faculdade"
+    - "pesquisa"
+    - "mestrado"
+
+  # Negativos (falsos positivos comuns em agregadores tech)
+  negatives:
+    - "employment history"
+    - "work history"
+    - "job history"
+    - "salary history"
+    - "our philosophy"
+    - "company philosophy"
+    - "sales"
+    - "pre-sales"
+    - "presales"
+    - "senior developer"
+    - "senior engineer"
+    - "backend"
+    - "frontend"
+    - "fullstack"
+    - "full stack"
+    - "devops"
+    - "software engineer"
+    - "software developer"
+    - "programmer"
+    - "nurse"
+    - "nursing"
+    - "enfermeiro"
+    - "enfermera"
+    - "welder"
+    - "soldador"
+    - "truck driver"
+    - "motorista"
+    - "sales representative"
+    - "vendedor"
+    - "customer support"
+    - "suporte ao cliente"
+    - "atencion al cliente"
+    - "data entry"
+    - "call center"
+    - "telemarketing"
+
+# Filtros rígidos
+filters:
+  remote_only: true
+  languages: ["en", "pt", "es"]
+  min_score_alert: 60
+  min_score_digest: 40
+  max_job_age_days: 30
+
+  # ---- Gate de INTERESSE (só vagas) ------------------------------
+  # Uma vaga só é considerada se bater com AO MENOS UM termo da lista.
+  # Palavra ÚNICA vale só no título/tags (evita "ótima comunicação" em
+  # vaga fora de escopo); EXPRESSÃO vale em título+descrição.
+  interests:
+    # Marketing / comunicação / mídias sociais (experiência E-life)
+    - "marketing"
+    - "mídias sociais"
+    - "redes sociais"
+    - "social media"
+    - "mídia"
+    - "midia"
+    - "comunicação"
+    - "comunicación"
+    - "communications"
+    - "communication"
+    - "publicidade"
+    - "propaganda"
+    - "branding"
+    - "conteúdo digital"
+    - "conteudo digital"
+    - "copywriting"
+    - "growth"
+    - "seo"
+    - "crm"
+    - "public relations"
+    - "relações públicas"
+    - "relacoes publicas"
+    - "advertising"
+    - "publicity"
+    - "content marketing"
+    - "marketing digital"
+    - "digital marketing"
+    - "social media marketing"
+    - "media relations"
+    - "gestão de conteúdo"
+    - "gestao de conteudo"
+    - "monitoramento"
+    # Humanidades digitais / métodos digitais
+    - "humanidades digitais"
+    - "humanidades digitales"
+    - "digital humanities"
+    - "digital scholarship"
+    - "patrimônio digital"
+    - "patrimonio digital"
+    - "digital heritage"
+    - "computational social science"
+    - "humanidades computacionais"
+    - "digital methods"
+    - "métodos digitais"
+    - "metodos digitales"
+    - "cultural analytics"
+    - "humanistic ai"
+    - "ia humanística"
+    - "digital curation"
+    - "curadoria digital"
+    - "digital collections"
+    # Divulgação científica e cultural / GLAM
+    - "divulgação"
+    - "divulgação científica"
+    - "divulgacao cientifica"
+    - "divulgação cultural"
+    - "divulgacion cultural"
+    - "science communication"
+    - "comunicação científica"
+    - "comunicacion cientifica"
+    - "science outreach"
+    - "science writing"
+    - "escrita científica"
+    - "escritura cientifica"
+    - "jornalismo científico"
+    - "scientific journalism"
+    - "open science"
+    - "ciência aberta"
+    - "ciencia abierta"
+    - "curadoria"
+    - "acervo"
+    - "museu"
+    - "museo"
+    - "museum"
+    - "biblioteca"
+    - "library"
+    - "arquivo"
+    - "archive"
+    - "archives"
+    - "patrimônio"
+    - "patrimonio"
+    - "heritage"
+    - "editorial"
+    - "editor"
+    - "editoração"
+    - "publishing"
+    - "exposição"
+    - "exhibition"
+    - "journalist"
+    - "journalism"
+    - "redator"
+    - "periodista"
+    # Ciências sociais e humanas
+    - "ciências sociais"
+    - "ciencias sociais"
+    - "social sciences"
+    - "social science"
+    - "ciência política"
+    - "ciencia politica"
+    - "ciências humanas"
+    - "ciencias humanas"
+    - "human sciences"
+    - "sociologia"
+    - "sociology"
+    - "antropologia"
+    - "anthropology"
+    - "filosofia"
+    - "philosophy"
+    - "humanidades"
+    - "humanities"
+    - "cultural studies"
+    - "estudos culturais"
+    - "science studies"
+    - "historian"
+    - "historiador"
+    - "história"
+    - "history"
+    # Pesquisa / GLAM / escrita (captura research internships, arquivistas,
+    - bibliotecários, curadores e redatores de divulgação)
+    - "research"
+    - "archivist"
+    - "arquivista"
+    - "librarian"
+    - "bibliotecário"
+    - "bibliotecario"
+    - "curator"
+    - "writer"
+    - "archaeology"
+    - "arqueologia"
+    # Programação / dados para ciências sociais
+    - "python"
+    - "data analysis"
+    - "análise de dados"
+    - "analise de dados"
+    - "data analyst"
+    - "data scientist"
+    - "data visualization"
+    - "visualização de dados"
+    - "estatística"
+    - "estatistica"
+    - "statistics"
+    - "quantitative"
+    - "quantitativa"
+    - "pesquisa quantitativa"
+    - "quantitative research"
+    # Termos genéricos demais (pegam dev/analista fora do escopo) — removidos
+    # "programming", "programação", "machine learning", "data", "dados",
+    - "media"
+    - "digital innovation"
+  exclude_areas:
+    - "direito"
+    - "advocacia"
+    - "advogado"
+    - "advogada"
+    - "jurídico"
+    - "juridico"
+    - "legal"
+    - "law"
+    - "attorney"
+    - "segurança do trabalho"
+    - "seguranca do trabalho"
+    - "occupational safety"
+    - "safety technician"
+    - "medicina"
+    - "enfermagem"
+    - "enfermeiro"
+    - "nursing"
+    - "odontologia"
+
+  # Presencial (rejeita mesmo com flag remote=1, ex.: "Jornada híbrida:
+  # Presencial + Home Office" da Vagas.com ou estágio em Betim/MG)
+  onsite_markers:
+    - "presencial"
+    - "on-site"
+    - "onsite"
+    - "on site"
+    - "in-person"
+    - "in person"
+    - "híbrido"
+    - "hibrido"
+    - "hybrid"
+    - "cidades próximas"
+    - "cidades proximas"
+    - "aceita candidaturas"
+    - "relocation"
+    - "must relocate"
+    - "must be located"
+    - "in-office"
+    - "in office"
+    - "no escritório"
+
+  # Remoto FORTE (título/localização) — salva um item que mencione
+  # "on-site" em algum ponto da descrição (ex.: "remote com visitas ocasionais")
+  remote_strong_markers:
+    - "remote"
+    - "remoto"
+    - "remota"
+    - "home office"
+    - "home-office"
+    - "work from home"
+    - "wfh"
+    - "teletrabalho"
+    - "anywhere"
+    - "worldwide"
+    - "flexible remote"
+
+# Alertas
+alerts:
+  telegram:
+    enabled: true  # defina true + configure bot_token/chat_id em .env
+    bot_token: "SEU_BOT_TOKEN_AQUI"
+    chat_id: "SEU_CHAT_ID_AQUI"
+  email:
+    enabled: true  # defina true + configure SMTP em .env
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_user: "SEU_EMAIL@gmail.com"
+    smtp_pass: "SUA_SENHA_DE_APP"
+    from_email: "SEU_EMAIL@gmail.com"
+    to_email: "EMAIL_DE_DESTINO@gmail.com"
+
+# Armazenamento — bancos separados por domínio
+storage:
+  db_path_jobs: "jobs.db"          # vagas/estágios (category = job)
+  db_path_academic: "academic.db"  # bolsas/eventos/chamadas (category != job)
+  db_path: "items.db"              # legado: backup pré-separação / fallback
+  dedup_by: "url_hash"  # url_hash | title_company
+
+# Execução
+runtime:
+  user_agent: "Mozilla/5.0 (compatible; JobPipeline/1.0; +https://github.com)"
+  timeout: 30
+  max_retries: 3

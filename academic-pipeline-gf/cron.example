@@ -1,0 +1,22 @@
+# Academic Pipeline - Cron Examples
+# Copie as linhas desejadas para seu crontab (crontab -e)
+# O pipeline roda em /home/bianca/academic-pipeline-gf
+
+# =============================================================================
+# VARIÁVEIS DE AMBIENTE (defina no topo do crontab ou no .bashrc)
+# =============================================================================
+# PATH=/home/bianca/academic-pipeline-gf/.venv/bin:/usr/local/bin:/usr/bin:/bin
+# HOME=/home/bianca
+# TELEGRAM_BOT_TOKEN=seu_token
+# TELEGRAM_CHAT_ID=seu_chat_id
+
+# =============================================================================
+# AGENDAMENTO (exemplos — descomente a linha desejada)
+# =============================================================================
+
+# Diário às 12h: coleta + alertas acadêmicos
+# 0 12 * * * cd /home/bianca/academic-pipeline-gf && .venv/bin/python -m main academic collect >> logs/academic_collect.log 2>&1
+# 5 12 * * * cd /home/bianca/academic-pipeline-gf && .venv/bin/python -m main academic alert --channel both >> logs/academic_alert.log 2>&1
+
+# Ou use o run_weekly.sh via anacron (recomendado):
+#   7  20  pipeline.semanal  runuser -u bianca -- /home/bianca/academic-pipeline-gf/run_weekly.sh

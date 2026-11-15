@@ -1,0 +1,66 @@
+# Job & Academic Pipeline - Cron Examples
+# Copie as linhas desejadas para seu crontab (crontab -e)
+
+# =============================================================================
+# VARIÁVEIS DE AMBIENTE (defina no topo do crontab ou no .bashrc)
+# =============================================================================
+# PATH=/home/bianca/job-pipeline/.venv/bin:/usr/local/bin:/usr/bin:/bin
+# HOME=/home/bianca
+# TELEGRAM_BOT_TOKEN=seu_token
+# TELEGRAM_CHAT_ID=seu_chat_id
+# SMTP_USER=seu_email@gmail.com
+# SMTP_PASS=sua_app_password
+# FROM_EMAIL=seu_email@gmail.com
+# TO_EMAIL=destino@gmail.com
+# ADZUNA_APP_ID=seu_app_id
+# ADZUNA_APP_KEY=sua_app_key
+# JOOBLE_API_KEY=sua_chave
+
+# =============================================================================
+# COLETA DIÁRIA DE VAGAS (09:00 BRT = 12:00 UTC)
+# =============================================================================
+# Coleta vagas + envia alertas
+0 12 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main jobs collect >> logs/jobs_collect.log 2>&1
+5 12 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main jobs alert --channel both >> logs/jobs_alert.log 2>&1
+
+# =============================================================================
+# COLETA DIÁRIA ACADÊMICA (09:30 BRT = 12:30 UTC)
+# =============================================================================
+# Coleta CFPs/eventos + envia alertas
+30 12 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main academic collect >> logs/academic_collect.log 2>&1
+35 12 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main academic alert --channel both >> logs/academic_alert.log 2>&1
+
+# =============================================================================
+# DIGEST DIÁRIO (10:00 BRT = 13:00 UTC) - Resumo do dia
+# =============================================================================
+0 13 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main jobs digest -d 1 >> logs/jobs_digest.log 2>&1
+5 13 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main academic digest -d 1 >> logs/academic_digest.log 2>&1
+
+# =============================================================================
+# VERIFICAÇÃO DE DEADLINES DE CFP (10:30 BRT)
+# =============================================================================
+30 13 * * * cd /home/bianca/job-pipeline && .venv/bin/python -m main academic deadlines -d 14 >> logs/deadlines.log 2>&1
+
+# =============================================================================
+# DIGEST SEMANAL (Segundas 08:00 BRT = 11:00 UTC)
+# =============================================================================
+0 11 * * 1 cd /home/bianca/job-pipeline && .venv/bin/python -m main jobs digest -d 7 >> logs/weekly_jobs_digest.log 2>&1
+5 11 * * 1 cd /home/bianca/job-pipeline && .venv/bin/python -m main academic digest -d 7 >> logs/weekly_academic_digest.log 2>&1
+
+# =============================================================================
+# EXPORTAÇÃO MENSAL CSV (Primeiro dia do mês 07:00 BRT)
+# =============================================================================
+0 10 1 * * cd /home/bianca/job-pipeline && .venv/bin/python -m main export -o exports/jobs_$(date +\%Y\%m).csv --category job -d 30 >> logs/export.log 2>&1
+5 10 1 * * cd /home/bianca/job-pipeline && .venv/bin/python -m main export -o exports/academic_$(date +\%Y\%m).csv --category cfp -d 30 >> logs/export.log 2>&1
+
+# =============================================================================
+# LIMPEZA DE LOGS ANTIGOS (Domingos 03:00 BRT)
+# =============================================================================
+0 6 * * 0 find /home/bianca/job-pipeline/logs -name "*.log" -mtime +30 -delete
+
+# =============================================================================
+# BACKUP DO BANCO (Diário 02:00 BRT)
+# =============================================================================
+# Backup diário dos bancos (o run_weekly.sh já faz backup semanal dos bancos
+# novos; esta linha é redundante e cobre só o items.db legado)
+# 0 5 * * * cd /home/bianca/job-pipeline && cp items.db backups/items_$(date +\%Y\%m\%d).db && find backups -name "items_*.db" -mtime +60 -delete
