@@ -42,7 +42,7 @@ sources:
     rate_limit: 2.0
 
   - name: jooble
-    enabled: false  # habilite e configure JOOBLE_API_KEY no .env
+    enabled: true  # chave JOOBLE_API_KEY no .env (limite: 100 req/dia)
     type: api
     base_url: "https://jooble.org/api"
     params:
