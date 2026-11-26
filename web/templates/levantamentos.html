@@ -1,0 +1,139 @@
+{% extends "base.html" %}{% block title %}{{ title }}{% endblock %}
+{% macro field_cfg(path) %}cfg:{{ path }}{% endmacro %}
+{% block content %}
+<div class="top">
+  <div><h1>{{ title }}</h1>
+    <div class="sub">Cada levantamento tem seus próprios interesses, escopo e limites. O ativo é usado na próxima coleta.</div></div>
+  <a class="btn" href="{{ url_for('levantamentos', scope='academic' if scope=='professional' else 'professional') }}">
+    {{ '🎓 Acadêmicos' if scope=='professional' else '💼 Profissionais' }}</a>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <h2>Meus levantamentos</h2>
+    <div class="list-surveys">
+      {% for s in surveys %}
+      <div class="survey-item {{ 'active' if s.active }}">
+        <div class="row spread" style="gap:8px">
+          <div>
+            <a href="{{ url_for('levantamentos', scope=scope, editar=s.id) }}"><b>{{ s.name }}</b></a>
+            <div class="hint">{{ s.id }}{% if not s.enabled %} · desligado{% endif %}</div>
+            {% if s.description %}<div class="hint">{{ s.description }}</div>{% endif %}
+          </div>
+          <div class="row" style="gap:6px">
+            {% if s.active %}<span class="pill ok">ativo</span>
+            {% else %}
+            <form method="post">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="activate">
+              <input type="hidden" name="survey_id" value="{{ s.id }}">
+              <button class="btn sm" type="submit">Ativar</button>
+            </form>
+            {% endif %}
+            <a class="btn sm" href="{{ url_for('levantamentos', scope=scope, editar=s.id) }}">Editar</a>
+            {% if s.deletable %}
+            <form method="post" data-confirm="Excluir o levantamento '{{ s.name }}'?">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="survey_id" value="{{ s.id }}">
+              <button class="btn sm danger" type="submit">Excluir</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>{{ 'Criar novo levantamento' if not (current and current.id != active.id) else 'Editando: ' ~ current.name }}</h2>
+    <form method="post" id="survey-form">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="{{ 'save' if current and request.args.get('editar') else 'create' }}">
+      <input type="hidden" name="survey_id" value="{{ current.id if request.args.get('editar') else '' }}">
+      <div class="field"><label>Nome</label>
+        <input name="survey_name" required maxlength="80" value="{{ current.name if request.args.get('editar') else '' }}" placeholder="Ex.: Patrimônio e história (namorada)"></div>
+      <div class="field"><label>Descrição</label>
+        <input name="survey_description" maxlength="240" value="{{ current.description if request.args.get('editar') else '' }}" placeholder="Interesses e escopo deste levantamento"></div>
+      <label class="toggle"><input type="checkbox" name="survey_enabled" {{ 'checked' if not current or current.enabled }}>
+        Levantamento ligado</label>
+      <div class="hint">Dica: troque o nome, desmarque termos que não são seus e ative este levantamento. Os resultados continuam separados por escopo (acadêmico/profissional).</div>
+      <button class="btn primary" style="margin-top:14px" type="submit">💾 Salvar levantamento</button>
+    </form>
+  </div>
+</div>
+
+{% set cfg_current = current %}
+<form method="post" id="config-form" style="margin-top:18px">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save">
+  <input type="hidden" name="survey_id" value="{{ current.id if request.args.get('editar') else '' }}">
+  <input type="hidden" name="survey_name" value="{{ current.name if request.args.get('editar') else '' }}">
+  <input type="hidden" name="survey_description" value="{{ current.description if request.args.get('editar') else '' }}">
+  <input type="hidden" name="survey_enabled" value="{{ 'on' if not request.args.get('editar') or current.enabled else '' }}">
+
+  <details open>
+    <summary>🔑 Interesses, palavras-chave e consultas
+      <span class="hint">máximo rígido de 30 termos por grupo</span></summary>
+    <div class="body">
+      {% for f in view.terms %}
+      <details>
+        <summary>{{ term_labels.get(f.path, f.label) }} <span class="pill {{ 'warn' if f.count >= 30 else 'dim' }}">{{ f.count }}/30</span></summary>
+        <div class="body">
+          <textarea name="cfg:{{ f.path }}" data-limit="30" data-path="{{ f.path }}">{{ f.text }}</textarea>
+          <div class="hint counter" data-for="{{ f.path }}">{{ f.count }} de 30 termos · um por linha · o 31º é descartado</div>
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+  </details>
+
+  <details>
+    <summary>⚙️ Escopo e limites <span class="hint">respeita o Pi 3B (teto 60 páginas)</span></summary>
+    <div class="body grid g2">
+      {% for f in view.numbers %}
+      <div class="field"><label>{{ f.label }}</label>
+        <input name="cfg:{{ f.path }}" type="number" min="{{ f.min }}" max="{{ f.max }}" step="{{ f.step }}" value="{{ f.value }}">
+        <div class="hint">{{ f.min }}–{{ f.max }}</div></div>
+      {% endfor %}
+      {% for f in view.selects %}
+      <div class="field"><label>{{ f.label }}</label>
+        <select name="cfg:{{ f.path }}" {{ 'multiple' if f.path.endswith('engines') }} size="{{ 2 if f.path.endswith('engines') else 1 }}">
+          {% for o in f.options %}<option value="{{ o }}" {{ 'selected' if o in f.selected }}>{{ o }}</option>{% endfor %}
+        </select></div>
+      {% endfor %}
+      {% for f in view.bools %}
+      <label class="toggle"><input type="checkbox" name="cfg:{{ f.path }}" {{ 'checked' if f.checked }}> {{ f.label }}</label>
+      {% endfor %}
+    </div>
+  </details>
+
+  <details>
+    <summary>📡 Fontes deste escopo <span class="hint">ligar/desligar coletores</span></summary>
+    <div class="body grid g2">
+      {% for s in view.sources %}
+      <label class="toggle"><input type="checkbox" name="src:{{ s.kind }}:{{ s.name }}" {{ 'checked' if s.enabled }}>
+        {{ s.name }} <span class="hint">({{ s.type or 'api' }})</span></label>
+      {% endfor %}
+    </div>
+  </details>
+
+  <details>
+    <summary>🚫 Filtros de relevância <span class="hint">blocklists por título, domínio e URL</span></summary>
+    <div class="body grid g2">
+      <div class="field"><label>Títulos barrados</label>
+        <textarea name="cfg:relevance.blocklists.title" data-limit="30">{{ view.block_title }}</textarea></div>
+      <div class="field"><label>Domínios barrados</label>
+        <textarea name="cfg:relevance.blocklists.domain" data-limit="30">{{ view.block_domain }}</textarea></div>
+      <div class="field"><label>Trechos da URL</label>
+        <textarea name="cfg:relevance.blocklists.url_path" data-limit="30">{{ view.block_path }}</textarea></div>
+    </div>
+  </details>
+
+  <div class="row" style="margin-top:18px">
+    <button class="btn primary" type="submit">💾 Salvar configuração do levantamento</button>
+    <span class="hint">Vale para a próxima coleta deste levantamento.</span>
+  </div>
+</form>
+{% endblock %}

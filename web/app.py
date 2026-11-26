@@ -15,6 +15,8 @@ from feedback import get_feedback_store
 from web import auth
 from web import services
 from web import settings
+from web import survey_forms
+from surveys import active_ids, list_surveys
 
 BASE = Path(__file__).parent
 
@@ -85,6 +87,30 @@ def create_app() -> Flask:
             precision=fb.precision_by_source(), schedule=load_config().get("schedule", {}),
         )
 
+    @app.route("/levantamentos/<scope>", methods=["GET", "POST"])
+    @auth.login_required
+    def levantamentos(scope: str):
+        if scope not in ("academic", "professional"):
+            return render_template("error.html", message="Escopo inválido"), 404
+        edit_id = request.args.get("editar", "")
+        success = True
+        if request.method == "POST":
+            success, errors = survey_forms.apply_form(request.form, scope)
+            for e in errors:
+                flash(e, "ok" if success else "error")
+            if success:
+                return redirect(url_for("levantamentos", scope=scope))
+        surveys = list_surveys(scope)
+        active = next((s for s in surveys if s["active"]), surveys[0] if surveys else None)
+        current = next((s for s in surveys if s["id"] == edit_id), active)
+        view = survey_forms.editable_paths(scope)
+        title = "Levantamentos acadêmicos" if scope == "academic" else "Levantamentos profissionais"
+        return render_template(
+            "levantamentos.html", scope=scope, title=title, surveys=surveys,
+            active=active, current=current, view=view,
+            term_labels=survey_forms.TERM_LABELS,
+        )
+
     @app.route("/itens")
     @auth.login_required
     def items():
@@ -100,15 +126,17 @@ def create_app() -> Flask:
         except ValueError:
             min_score = 0.0
         order = request.args.get("order", "score")
+        survey_id = request.args.get("survey", "")
         page = max(1, int(request.args.get("page", 1) or 1))
         per = 20
         rows, total = store.get_items_page(
             per, (page - 1) * per, q=q, source=source, category=category,
-            track=track, min_score=min_score, order=order)
+            track=track, survey_id=survey_id, min_score=min_score, order=order)
         return render_template(
             "items.html", db=db, rows=rows, total=total, page=page,
             per=per, pages=max(1, (total + per - 1) // per),
             q=q, source=source, category=category, track=track,
+            survey_id=survey_id, surveys=list_surveys(db),
             min_score=min_score, order=order, sources=store.get_sources(),
             export_qs=request.query_string.decode(),
         )

@@ -125,7 +125,8 @@ def test_rotas_com_test_client(tmp_path, monkeypatch):
     res = client.post("/login", data={"password": "senha-teste", "csrf": csrf})
     assert res.status_code == 302
 
-    for url in ("/", "/itens", "/ajustes", "/sistema", "/revisao"):
+    for url in ("/", "/itens", "/ajustes", "/sistema", "/revisao",
+                "/levantamentos/academic", "/levantamentos/professional"):
         assert client.get(url).status_code == 200, url
 
     # CSRF obrigatório em POST

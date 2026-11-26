@@ -52,13 +52,16 @@
 </div>
 
 <div class="card" style="margin-top:16px">
-  <div class="row spread"><h2>Agenda & calibração</h2>
-    <a class="btn sm" href="{{ url_for('ajustes') }}">Alterar ajustes</a></div>
+  <div class="row spread"><h2>Agenda & levantamentos</h2>
+    <a class="btn sm" href="{{ url_for('ajustes') }}">Ajustes gerais</a></div>
   <div class="row">
     <span class="pill dim">mode: {{ schedule.get('mode','weekly') }}</span>
     <span class="pill dim">dia: {{ schedule.get('weekday','sun') }}</span>
     <span class="pill dim">hora: {{ schedule.get('time','03:17') }}</span>
-    <span class="pill dim">páginas: {{ 40 if not schedule else 'ver ajustes' }}</span>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <a class="btn sm" href="{{ url_for('levantamentos', scope='academic') }}">🎓 Levantamentos acadêmicos</a>
+    <a class="btn sm" href="{{ url_for('levantamentos', scope='professional') }}">💼 Levantamentos profissionais</a>
   </div>
   <div class="hint">Alterações de keywords, limites e agenda são salvas sem tocar no <code>config.yaml</code> versionado.</div>
 </div>

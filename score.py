@@ -10,9 +10,11 @@ from config import CONFIG
 
 
 class Scorer:
-    def __init__(self):
-        self.config = CONFIG["keywords"]
-        self.filters = CONFIG["filters"]
+    def __init__(self, config: dict = None):
+        cfg = config if config is not None else CONFIG
+        self.cfg = cfg
+        self.config = cfg["keywords"]
+        self.filters = cfg["filters"]
 
         # Compila regex patterns para busca case-insensitive
         self._compile_patterns()
@@ -221,7 +223,7 @@ class Scorer:
         # Fica depois dos gates históricos para preservar os motivos já
         # conhecidos nos testes e nos logs ("not in interests", etc.).
         from relevance import check_opportunity
-        ok, reason = check_opportunity(item)
+        ok, reason = check_opportunity(item, self.cfg.get("relevance"))
         if not ok:
             return self._reject(item, reason)
 
@@ -324,7 +326,7 @@ class Scorer:
         return item.score, item.matched_keywords
 
 
-def score_item(item: BaseItem) -> BaseItem:
-    scorer = Scorer()
+def score_item(item: BaseItem, config: dict = None) -> BaseItem:
+    scorer = Scorer(config)
     scorer.score(item)
     return item

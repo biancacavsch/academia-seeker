@@ -11,10 +11,14 @@
   <nav class="side">
     <div class="logo">✦ academia-seeker</div>
     <a href="{{ url_for('dashboard') }}" class="{{ 'on' if request.endpoint=='dashboard' }}">🏠 Visão geral</a>
-    <a href="{{ url_for('items', db='academic') }}" class="{{ 'on' if request.endpoint=='items' and request.args.get('db','academic')!='jobs' }}">🎓 Acadêmico</a>
-    <a href="{{ url_for('items', db='jobs') }}" class="{{ 'on' if request.endpoint=='items' and request.args.get('db')=='jobs' }}">💼 Vagas</a>
+    <div class="nav-label">Acadêmico</div>
+    <a href="{{ url_for('levantamentos', scope='academic') }}" class="{{ 'on' if request.endpoint=='levantamentos' and request.view_args.get('scope')=='academic' }}">🧭 Levantamentos</a>
+    <a href="{{ url_for('items', db='academic') }}" class="{{ 'on' if request.endpoint=='items' and request.args.get('db','academic')!='jobs' }}">🎓 Resultados</a>
+    <div class="nav-label">Profissional</div>
+    <a href="{{ url_for('levantamentos', scope='professional') }}" class="{{ 'on' if request.endpoint=='levantamentos' and request.view_args.get('scope')=='professional' }}">🧭 Levantamentos</a>
+    <a href="{{ url_for('items', db='jobs') }}" class="{{ 'on' if request.endpoint=='items' and request.args.get('db')=='jobs' }}">💼 Resultados</a>
     <a href="{{ url_for('revisao') }}" class="{{ 'on' if request.endpoint=='revisao' }}">✅ Calibração</a>
-    <a href="{{ url_for('ajustes') }}" class="{{ 'on' if request.endpoint=='ajustes' }}">⚙️ Ajustes</a>
+    <a href="{{ url_for('ajustes') }}" class="{{ 'on' if request.endpoint=='ajustes' }}">⚙️ Ajustes gerais</a>
     <a href="{{ url_for('sistema') }}" class="{{ 'on' if request.endpoint=='sistema' }}">🖥️ Sistema</a>
     <div class="foot">Raspberry Pi 3B · {{ web_user }}</div>
   </nav>

@@ -34,6 +34,7 @@ class BaseItem:
     score: float = 0.0
     matched_keywords: list[str] = field(default_factory=list)
     raw_data: dict = field(default_factory=dict)
+    survey_id: str = "principal"
 
     def __post_init__(self):
         if self.posted_at is None:
@@ -69,6 +70,7 @@ class BaseItem:
             "score": self.score,
             "matched_keywords": ",".join(self.matched_keywords),
             "raw_data": str(self.raw_data),
+            "survey_id": self.survey_id,
         }
 
     @classmethod
@@ -100,6 +102,7 @@ class BaseItem:
             language=data.get("language", "unknown"),
             score=data.get("score", 0.0),
             matched_keywords=matched,
+            survey_id=data.get("survey_id") or "principal",
         )
         item.url_hash = data["url_hash"]
         return item
@@ -159,6 +162,7 @@ class Job(BaseItem):
             language=data.get("language", "unknown"),
             score=data.get("score", 0.0),
             matched_keywords=matched,
+            survey_id=data.get("survey_id") or "principal",
             salary_min=data.get("salary_min"),
             salary_max=data.get("salary_max"),
             salary_text=data.get("salary_text", ""),
@@ -275,6 +279,7 @@ class AcademicItem(BaseItem):
             language=data.get("language", "unknown"),
             score=data.get("score", 0.0),
             matched_keywords=matched,
+            survey_id=data.get("survey_id") or "principal",
             event_type=data.get("event_type", "cfp"),
             venue=data.get("venue", ""),
             submission_deadline=sub_deadline,

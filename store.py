@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS items (
     travel_grant INTEGER,
     track TEXT,
     deadline_status TEXT,
+    survey_id TEXT DEFAULT 'principal',
     first_seen_at TEXT NOT NULL,
     last_seen_at TEXT NOT NULL
 );
@@ -61,6 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_items_category ON items (category);
 CREATE INDEX IF NOT EXISTS idx_items_deadline ON items (deadline_at);
 CREATE INDEX IF NOT EXISTS idx_items_track ON items (track);
 CREATE INDEX IF NOT EXISTS idx_items_deadline_status ON items (deadline_status);
+CREATE INDEX IF NOT EXISTS idx_items_survey ON items (survey_id);
 """
 
 
@@ -88,6 +90,8 @@ class ItemStore:
                 conn.execute("ALTER TABLE items ADD COLUMN track TEXT")
             if "deadline_status" not in cols:
                 conn.execute("ALTER TABLE items ADD COLUMN deadline_status TEXT")
+            if "survey_id" not in cols:
+                conn.execute("ALTER TABLE items ADD COLUMN survey_id TEXT DEFAULT 'principal'")
             # 3. Índices (só agora as colunas garantidamente existem)
             for s in stmts:
                 if s.upper().startswith("CREATE INDEX"):
@@ -132,7 +136,7 @@ class ItemStore:
                 getattr(item, 'track', None) or None,
                 getattr(item, 'deadline_status', None) or None,
             )
-        return base + job_fields + (now, now)
+        return base + job_fields + (getattr(item, "survey_id", "") or "principal", now, now)
 
     def upsert_item(self, item: BaseItem) -> bool:
         """Insere ou atualiza item. Retorna True se é novo (não existia)."""
@@ -148,9 +152,9 @@ class ItemStore:
                                  company, remote, salary_min, salary_max, salary_text,
                                  event_type, venue, submission_deadline, event_start_date,
                                  event_end_date, topics, is_virtual, travel_grant,
-                                 track, deadline_status,
+                                 track, deadline_status, survey_id,
                                  first_seen_at, last_seen_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(url_hash) DO UPDATE SET
                     title = excluded.title,
                     source = excluded.source,
@@ -180,6 +184,7 @@ class ItemStore:
                     travel_grant = excluded.travel_grant,
                     track = excluded.track,
                     deadline_status = excluded.deadline_status,
+                    survey_id = excluded.survey_id,
                     last_seen_at = excluded.last_seen_at
             """, row)
             conn.commit()
@@ -211,7 +216,8 @@ class ItemStore:
             )
             conn.commit()
 
-    def get_unalerted_items(self, min_score: float = 0, category: Optional[str] = None, kind: Optional[str] = None) -> List[BaseItem]:
+    def get_unalerted_items(self, min_score: float = 0, category: Optional[str] = None,
+                            kind: Optional[str] = None, survey_id: str = "") -> List[BaseItem]:
         from config import CONFIG
         max_age = CONFIG.get("filters", {}).get("max_job_age_days", 30)
         cutoff = (datetime.utcnow() - timedelta(days=max_age)).isoformat()
@@ -241,6 +247,9 @@ class ItemStore:
                 query += " AND i.category = 'job'"
             elif kind == "academic":
                 query += " AND i.category != 'job'"
+            if survey_id:
+                query += " AND i.survey_id = ?"
+                params.append(survey_id)
             query += " ORDER BY i.score DESC, i.posted_at DESC"
             cursor = conn.execute(query, params)
             return [self._row_to_item(dict(row)) for row in cursor.fetchall()]
@@ -287,7 +296,7 @@ class ItemStore:
     def get_items_page(
         self, limit: int = 25, offset: int = 0, *, q: str = "",
         source: str = "", category: str = "", track: str = "",
-        min_score: float = 0, order: str = "score",
+        survey_id: str = "", min_score: float = 0, order: str = "score",
     ) -> tuple[list[tuple[BaseItem, bool]], int]:
         """Lista paginada para a webview. Retorna [(item, alerted), ...], total."""
         where = ["i.score >= ?"]
@@ -304,6 +313,9 @@ class ItemStore:
         if track:
             where.append("i.track = ?")
             params.append(track)
+        if survey_id:
+            where.append("i.survey_id = ?")
+            params.append(survey_id)
         clause = " AND ".join(where)
         order_sql = {
             "score": "i.score DESC, i.posted_at DESC",
@@ -334,19 +346,31 @@ class ItemStore:
             return [r[0] for r in conn.execute(
                 "SELECT DISTINCT source FROM items ORDER BY source")]
 
-    def get_stats(self) -> dict:
+    def get_stats(self, survey_id: str = "") -> dict:
         with self._conn() as conn:
-            total = conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
-            alerted = conn.execute("SELECT COUNT(*) FROM alerts_sent").fetchone()[0]
-            by_source = dict(conn.execute("SELECT source, COUNT(*) FROM items GROUP BY source").fetchall())
-            by_category = dict(conn.execute("SELECT category, COUNT(*) FROM items GROUP BY category").fetchall())
-            avg_score = conn.execute("SELECT AVG(score) FROM items").fetchone()[0] or 0
+            where = "WHERE survey_id = ?" if survey_id else ""
+            params = [survey_id] if survey_id else []
+            total = conn.execute(f"SELECT COUNT(*) FROM items {where}", params).fetchone()[0]
+            if survey_id:
+                alerted = conn.execute(
+                    """SELECT COUNT(*) FROM alerts_sent a JOIN items i
+                       ON a.url_hash = i.url_hash WHERE i.survey_id = ?""", params).fetchone()[0]
+            else:
+                alerted = conn.execute("SELECT COUNT(*) FROM alerts_sent").fetchone()[0]
+            by_source = dict(conn.execute(
+                f"SELECT source, COUNT(*) FROM items {where} GROUP BY source", params).fetchall())
+            by_category = dict(conn.execute(
+                f"SELECT category, COUNT(*) FROM items {where} GROUP BY category", params).fetchall())
+            by_survey = dict(conn.execute(
+                "SELECT COALESCE(survey_id,'principal'), COUNT(*) FROM items GROUP BY survey_id").fetchall())
+            avg_score = conn.execute(f"SELECT AVG(score) FROM items {where}", params).fetchone()[0] or 0
             return {
                 "total_items": total,
                 "alerted": alerted,
                 "unalerted": total - alerted,
                 "by_source": by_source,
                 "by_category": by_category,
+                "by_survey": by_survey,
                 "avg_score": round(avg_score, 1),
             }
 

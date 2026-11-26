@@ -74,46 +74,81 @@ ACADEMIC_COLLECTORS = {
 }
 
 
-def get_collector(name: str, source_config: dict = None):
+def get_collector(name: str, source_config: dict = None, config: dict = None):
+    """Cria coletor. `config` permite que cada levantamento use a própria whitelist."""
+    cfg = config if config is not None else CONFIG
     cls = JOB_COLLECTORS.get(name) or ACADEMIC_COLLECTORS.get(name)
     if cls:
-        return cls()
+        collector = cls()
+        if hasattr(collector, "cfg"):
+            collector.cfg = _scope_config(cfg, name, source_config)
+        if hasattr(collector, "source_config") and source_config:
+            collector.source_config = dict(source_config)
+        return collector
 
     # Dynamic creation from config
     if source_config:
         source_type = source_config.get("type", "rss")
         if source_type == "html_job":
-            return _create_job_html_collector(name, source_config)
+            collector = _create_job_html_collector(name, source_config)
         elif source_type == "rss":
-            return _create_rss_collector(name, source_config)
+            collector = _create_rss_collector(name, source_config)
         elif source_type == "html":
-            return _create_html_collector(name, source_config)
+            collector = _create_html_collector(name, source_config)
+        else:
+            raise ValueError(f"Unknown collector: {name}")
+        if hasattr(collector, "cfg"):
+            collector.cfg = _scope_config(cfg, name, source_config)
+        if hasattr(collector, "source_config") and source_config:
+            collector.source_config = dict(source_config)
+        return collector
 
     raise ValueError(f"Unknown collector: {name}")
 
 
-def get_job_collectors():
-    """Get only job collectors."""
+def _scope_config(cfg: dict, name: str, source_config: dict | None) -> dict:
+    """Subseção de config relevante para o coletor (com override do levantamento)."""
+    if source_config and source_config.get("kind") == "estagio":
+        section = "estagio_search"
+    elif name in ("estagio_search", "empresas_alvo", "catho_estagio",
+                  "vagas_estagio", "jobs99_estagio"):
+        section = "estagio_search" if name == "estagio_search" else "empresas_alvo"
+    else:
+        section = "academic_search" if name in ACADEMIC_COLLECTORS or \
+            (source_config or {}).get("category") else "academic_search"
+    return cfg.get(section, {}) or {}
+
+
+def get_job_collectors(config: dict = None):
+    """Get only job collectors, honoring the active survey's config."""
+    cfg = config if config is not None else CONFIG
     enabled = []
-    for src in CONFIG["sources"]:
-        if src.get("enabled", True):
-            collector = get_collector(src["name"], src)
-            enabled.append(collector)
+    for src in cfg.get("sources", []):
+        if not src.get("enabled", True):
+            continue
+        if (src.get("kind") == "estagio" and
+                not (cfg.get("estagio_search", {}) or {}).get("enabled", True)):
+            continue
+        enabled.append(get_collector(src["name"], src, cfg))
     return enabled
 
 
-def get_academic_collectors():
-    """Get only academic collectors."""
+def get_academic_collectors(config: dict = None):
+    """Get only academic collectors, honoring the active survey's config."""
+    cfg = config if config is not None else CONFIG
     enabled = []
-    for src in CONFIG.get("academic_sources", []):
+    for src in cfg.get("academic_sources", []):
         if src.get("enabled", True):
-            collector = get_collector(src["name"], src)
-            enabled.append(collector)
-    if CONFIG.get("academic_search", {}).get("enabled", False):
-        enabled.append(SearchAcademicCollector())
+            enabled.append(get_collector(src["name"], src, cfg))
+    if (cfg.get("academic_search", {}) or {}).get("enabled", False):
+        collector = SearchAcademicCollector()
+        collector.cfg = cfg.get("academic_search", {})
+        enabled.append(collector)
     return enabled
 
 
-def get_enabled_collectors():
+def get_enabled_collectors(config: dict = None):
     """Get all collectors (backward compatibility)."""
-    return get_job_collectors() + get_academic_collectors()
+    return get_job_collectors(config) + get_academic_collectors(config)
+
+

@@ -38,6 +38,9 @@ relevance:
     enabled: true
     prefix_tokens: 3
 
+# Limite rígido em todas as listas de termos/consultas: 30 itens por lista.
+# O carregador (limits.py) trunca qualquer lista maior, inclusive no config.yaml.
+
 schedule:
   mode: "weekly"         # weekly | daily | every_n_days
   weekday: "sun"

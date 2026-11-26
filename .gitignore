@@ -34,6 +34,9 @@ wheels/
 ui_settings.yaml
 ui_settings.yaml.bak-*
 ui_settings.bak-*
+active_surveys.yaml
+active_surveys.yaml.bak
+surveys/*.yaml
 web/.secret_key
 
 # Databases

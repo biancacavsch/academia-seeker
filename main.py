@@ -37,9 +37,11 @@ def setup_logging(verbose: bool):
     logging.getLogger().setLevel(level)
 
 
-def run_job_collection(store: ItemStore, verbose: bool = False) -> List[Job]:
-    """Executa coleta apenas de vagas de emprego."""
-    collectors = get_job_collectors()
+def run_job_collection(store: ItemStore, verbose: bool = False,
+                       config: dict = None, survey_id: str = "principal") -> List[Job]:
+    """Executa coleta apenas de vagas de emprego (levantamento profissional)."""
+    cfg = config or CONFIG
+    collectors = get_job_collectors(cfg)
     all_jobs = []
 
     with Progress(
@@ -52,8 +54,9 @@ def run_job_collection(store: ItemStore, verbose: bool = False) -> List[Job]:
             task = progress.add_task(f"Coletando vagas {collector.name}...", total=None)
             try:
                 for job in deduplicate(collector.fetch()):
-                    job = score_item(job)
-                    if job.score >= CONFIG["filters"]["min_score_digest"] - 10:
+                    job = score_item(job, cfg)
+                    job.survey_id = survey_id
+                    if job.score >= cfg["filters"]["min_score_digest"] - 10:
                         is_new = store.upsert_item(job)
                         if is_new:
                             all_jobs.append(job)
@@ -67,9 +70,11 @@ def run_job_collection(store: ItemStore, verbose: bool = False) -> List[Job]:
     return all_jobs
 
 
-def run_academic_collection(store: ItemStore, verbose: bool = False) -> List[AcademicItem]:
-    """Executa coleta apenas de CFPs/eventos acadêmicos."""
-    collectors = get_academic_collectors()
+def run_academic_collection(store: ItemStore, verbose: bool = False,
+                            config: dict = None, survey_id: str = "principal") -> List[AcademicItem]:
+    """Executa coleta apenas de CFPs/eventos (levantamento acadêmico)."""
+    cfg = config or CONFIG
+    collectors = get_academic_collectors(cfg)
     all_items = []
 
     with Progress(
@@ -82,8 +87,9 @@ def run_academic_collection(store: ItemStore, verbose: bool = False) -> List[Aca
             task = progress.add_task(f"Coletando acadêmico {collector.name}...", total=None)
             try:
                 for item in deduplicate(collector.fetch()):
-                    item = score_item(item)
-                    if item.score >= CONFIG["filters"]["min_score_digest"] - 10:
+                    item = score_item(item, cfg)
+                    item.survey_id = survey_id
+                    if item.score >= cfg["filters"]["min_score_digest"] - 10:
                         is_new = store.upsert_item(item)
                         if is_new:
                             all_items.append(item)
@@ -98,10 +104,13 @@ def run_academic_collection(store: ItemStore, verbose: bool = False) -> List[Aca
     return all_items
 
 
-def run_alerts(store: ItemStore, channel: str = "both", category: str = None, kind: str = None):
-    """Envia alertas para items não alertados acima do threshold."""
-    min_score = CONFIG["filters"]["min_score_alert"]
-    unalerted = store.get_unalerted_items(min_score=min_score, category=category, kind=kind)
+def run_alerts(store: ItemStore, channel: str = "both", category: str = None,
+               kind: str = None, config: dict = None, survey_id: str = ""):
+    """Envia alertas para itens não alertados acima do threshold."""
+    cfg = config or CONFIG
+    min_score = cfg["filters"]["min_score_alert"]
+    unalerted = store.get_unalerted_items(min_score=min_score, category=category,
+                                          kind=kind, survey_id=survey_id)
 
     if not unalerted:
         cat_str = f" ({category or kind})" if (category or kind) else ""
@@ -506,6 +515,17 @@ def cmd_reprocess(apply: bool = False):
         console.print("[dim]Use --apply para gravar as novas pontuações.[/dim]")
 
 
+def _resolve_survey(scope: str, requested: str = None) -> tuple[str, dict]:
+    """Retorna (id, config efetiva) do levantamento ativo de um escopo."""
+    from surveys import active_ids, effective_config, get_survey
+    sid = requested or active_ids().get(scope, "principal")
+    survey = get_survey(scope, sid)
+    if not survey:
+        sid = "principal"
+    cfg = effective_config(scope, sid=sid)
+    return sid, cfg
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Job & Academic Pipeline - Vagas remotas + CFPs/Eventos em Humanidades Digitais, Filosofia da Tecnologia, Divulgação Científica",
@@ -532,8 +552,10 @@ Comandos principais:
     jobs_sub = jobs_parser.add_subparsers(dest="jobs_command", required=True)
 
     jobs_collect = jobs_sub.add_parser("collect", help="Coleta vagas de emprego")
+    jobs_collect.add_argument("--survey", help="ID do levantamento profissional")
     jobs_alert = jobs_sub.add_parser("alert", help="Envia alertas de vagas")
     jobs_alert.add_argument("--channel", choices=["telegram", "email", "both"], default="both")
+    jobs_alert.add_argument("--survey", help="ID do levantamento profissional")
     jobs_digest = jobs_sub.add_parser("digest", help="Mostra digest de vagas")
     jobs_digest.add_argument("-d", "--days", type=int, default=7)
     jobs_digest.add_argument("--min-score", type=float)
@@ -543,8 +565,10 @@ Comandos principais:
     academic_sub = academic_parser.add_subparsers(dest="academic_command", required=True)
 
     academic_collect = academic_sub.add_parser("collect", help="Coleta CFPs/eventos acadêmicos")
+    academic_collect.add_argument("--survey", help="ID do levantamento acadêmico")
     academic_alert = academic_sub.add_parser("alert", help="Envia alertas de CFPs/eventos")
     academic_alert.add_argument("--channel", choices=["telegram", "email", "both"], default="both")
+    academic_alert.add_argument("--survey", help="ID do levantamento acadêmico")
     academic_digest = academic_sub.add_parser("digest", help="Mostra digest de CFPs/eventos")
     academic_digest.add_argument("-d", "--days", type=int, default=7)
     academic_digest.add_argument("--min-score", type=float)
@@ -588,22 +612,24 @@ Comandos principais:
 
     try:
         if args.command == "jobs":
+            sid, survey_cfg = _resolve_survey("professional", getattr(args, "survey", None))
             if args.jobs_command == "collect":
-                console.print("[bold cyan]💼 Coletando vagas de emprego...[/bold cyan]")
-                new_jobs = run_job_collection(store, args.verbose)
+                console.print(f"[bold cyan]💼 Coletando vagas — levantamento '{sid}'...[/bold cyan]")
+                new_jobs = run_job_collection(store, args.verbose, survey_cfg, sid)
                 console.print(f"[green]Coleta finalizada: {len(new_jobs)} vagas novas[/green]")
             elif args.jobs_command == "alert":
-                run_alerts(store, args.channel, "job")
+                run_alerts(store, args.channel, "job", config=survey_cfg, survey_id=sid)
             elif args.jobs_command == "digest":
                 show_digest(store, args.days, args.min_score, "job")
 
         elif args.command == "academic":
+            sid, survey_cfg = _resolve_survey("academic", getattr(args, "survey", None))
             if args.academic_command == "collect":
-                console.print("[bold cyan]🎓 Coletando CFPs/eventos acadêmicos...[/bold cyan]")
-                new_items = run_academic_collection(store, args.verbose)
+                console.print(f"[bold cyan]🎓 Coletando acadêmico — levantamento '{sid}'...[/bold cyan]")
+                new_items = run_academic_collection(store, args.verbose, survey_cfg, sid)
                 console.print(f"[green]Coleta finalizada: {len(new_items)} itens novos[/green]")
             elif args.academic_command == "alert":
-                run_alerts(store, args.channel, kind="academic")
+                run_alerts(store, args.channel, kind="academic", config=survey_cfg, survey_id=sid)
             elif args.academic_command == "digest":
                 show_academic_digest(store, args.days, args.min_score)
             elif args.academic_command == "deadlines":

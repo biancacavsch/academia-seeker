@@ -1,7 +1,4 @@
 {% extends "base.html" %}{% block title %}Itens{% endblock %}
-{% macro qs(page) -%}
-db={{ db }}&q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category }}&track={{ track }}&min_score={{ min_score }}&order={{ order }}&page={{ page }}
-{%- endmacro %}
 {% block content %}
 <div class="top">
   <div><h1>{{ 'Vagas e estágios' if db=='jobs' else 'Bolsas, eventos e publicações' }}</h1>
@@ -18,6 +15,11 @@ db={{ db }}&q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ catego
     <input type="hidden" name="db" value="{{ db }}">
     <div style="flex:2;min-width:200px"><label>Buscar</label>
       <input name="q" value="{{ q }}" placeholder="título, descrição, empresa..."></div>
+    {% if surveys %}
+    <div style="flex:1;min-width:160px"><label>Levantamento</label>
+      <select name="survey" data-auto-submit><option value="">Todos</option>
+        {% for s in surveys %}<option value="{{ s.id }}" {{ 'selected' if s.id==survey_id }}>{{ s.name }}</option>{% endfor %}</select></div>
+    {% endif %}
     <div style="flex:1;min-width:140px"><label>Fonte</label>
       <select name="source" data-auto-submit><option value="">Todas</option>
         {% for s in sources %}<option value="{{ s }}" {{ 'selected' if s==source }}>{{ s }}</option>{% endfor %}</select></div>
@@ -46,7 +48,8 @@ db={{ db }}&q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ catego
         <div class="hint">{{ (item.description or '')[:150] }}</div>
         <div>{% for kw in item.matched_keywords[:4] %}<span class="tag">{{ kw }}</span>{% endfor %}</div>
       </td>
-      <td><span class="tag">{{ item.source }}</span></td>
+      <td><span class="tag">{{ item.source }}</span>
+        <div class="hint">{{ item.survey_id or 'principal' }}</div></td>
       <td><span class="tag track">{{ item.track or item.category }}</span></td>
       <td><span class="tag score">{{ item.score }}</span></td>
       <td class="hint">{{ item.posted_at.strftime('%d/%m/%y') if item.posted_at else '—' }}</td>
@@ -58,8 +61,8 @@ db={{ db }}&q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ catego
 </div>
 
 <div class="pager">
-  {% if page>1 %}<a class="btn sm" href="{{ url_for('items', db=db, q=q, source=source, category=category, track=track, min_score=min_score, order=order, page=page-1) }}">← anterior</a>{% endif %}
+  {% if page>1 %}<a class="btn sm" href="{{ url_for('items', db=db, q=q, source=source, category=category, track=track, survey=survey_id, min_score=min_score, order=order, page=page-1) }}">← anterior</a>{% endif %}
   <span class="hint">página {{ page }} de {{ pages }}</span>
-  {% if page<pages %}<a class="btn sm" href="{{ url_for('items', db=db, q=q, source=source, category=category, track=track, min_score=min_score, order=order, page=page+1) }}">próxima →</a>{% endif %}
+  {% if page<pages %}<a class="btn sm" href="{{ url_for('items', db=db, q=q, source=source, category=category, track=track, survey=survey_id, min_score=min_score, order=order, page=page+1) }}">próxima →</a>{% endif %}
 </div>
 {% endblock %}

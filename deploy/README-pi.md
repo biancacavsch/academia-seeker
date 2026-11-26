@@ -221,8 +221,31 @@ sudo systemctl status academia-seeker-web.service --no-pager
 | Visão geral | contadores, status, próxima rodada, **Rodar agora**, prazos |
 | Acadêmico / Vagas | busca, filtros, paginação, export CSV, motivos do score |
 | Calibração | fila de revisão: relevante / irrelevante / bloquear domínio / bloquear fonte; precisão por fonte |
-| Ajustes | keywords (≤30/grupo), páginas (teto 60), pausa (1–10 s), resultados, idiomas, fontes, gate, agenda |
-| Sistema | RAM/swap/disco, commit, log ao vivo,health de CasaOS/Pi-hole/Trilium/nginx |
+| Levantamentos acadêmicos | criar/editar/excluir/ativar perfis próprios (ex.: "Patrimônio e história"), keywords, fontes, limites e filtros por perfil |
+| Levantamentos profissionais | mesmas possibilidades, isolados do escopo acadêmico (vagas/estágios) |
+| Ajustes gerais | parâmetros globais e agenda do timer (keywords, páginas, pausa, fontes, gate) |
+| Sistema | RAM/swap/disco, commit, log ao vivo, health de CasaOS/Pi-hole/Trilium/nginx |
+
+### 9.2.1 Levantamentos (perfis)
+
+- Cada escopo tem seus próprios levantamentos; só o **ativo** roda na próxima
+  coleta (`academic collect` / `jobs collect`). A troca é feita em **Ativar**.
+- Cada item é gravado com `survey_id`; os resultados filtram por levantamento.
+- O perfil `principal` herda o `config.yaml` e não pode ser excluído.
+- O perfil **Patrimônio e história** já vem criado no acadêmico. Ative-o na UI
+  quando quiser que a namorada receba resultados desse escopo.
+- CLI: `python -m main academic collect --survey patrimonio-historia`.
+- Execução manual padrão continua `sudo systemctl start academia-seeker.service`
+  (usa os levantamentos ativos de cada escopo).
+
+### 9.2.2 Limite rígido de 30 termos
+
+Nenhuma lista de palavras-chave/consulta passa de **30 itens**:
+- no servidor (`limits.py` trunca qualquer lista grande ao carregar a config,
+  inclusive valores antigos do `config.yaml` versionado);
+- no formulário (JS remove o 31º termo ao digitar/colar, o backend valida de novo);
+- listas antigas do `config.yaml` (`broad`, `estagio`, `negatives`, `interests`)
+  foram reduzidas para 30 na origem.
 
 ### 9.3 Como a configuração é gravada
 
@@ -250,6 +273,8 @@ Comandos úteis:
 .venv/bin/python -m main simulate    # prévia do que iria por e-mail
 .venv/bin/python -m main reprocess   # simula rescore dos itens já salvos
 .venv/bin/python -m main reprocess --apply   # aplica o rescore
+.venv/bin/python -m main jobs collect --survey principal      # levantamento profissional
+.venv/bin/python -m main academic collect --survey patrimonio-historia
 ```
 
 Se o gate ficar agressivo demais, desligue em **Ajustes → Calibração das

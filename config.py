@@ -15,6 +15,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.yaml"
 UI_SETTINGS_PATH = BASE_DIR / "ui_settings.yaml"
+ACTIVE_SURVEYS_PATH = BASE_DIR / "active_surveys.yaml"
 
 
 def deep_merge(base: dict, override: dict) -> dict:
@@ -46,6 +47,14 @@ def load_config() -> dict[str, Any]:
         config = yaml.safe_load(f)
 
     config = deep_merge(config, load_ui_settings())
+
+    # Limite rígido: nenhuma lista de termos/consulta passa de 30 itens,
+    # mesmo quando o valor vem do config.yaml versionado.
+    try:
+        from limits import enforce_limits
+        enforce_limits(config)
+    except Exception:
+        pass
 
     # Override secrets from env (sempre por último)
     if config.get("alerts", {}).get("telegram", {}).get("enabled"):
