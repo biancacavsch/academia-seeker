@@ -1,0 +1,14 @@
+[Unit]
+Description=academia-seeker — timer semanal (domingo, 03:17)
+
+[Timer]
+# Domingo, 03:17 (horário local do Pi). Persistent=true executa na próxima
+# inicialização se o Pi estivesse desligado no horário agendado.
+OnCalendar=Sun *-*-* 03:17:00
+Persistent=true
+RandomizedDelaySec=30m
+AccuracySec=5m
+Unit=academia-seeker.service
+
+[Install]
+WantedBy=timers.target

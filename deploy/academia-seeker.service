@@ -1,0 +1,19 @@
+[Unit]
+Description=academia-seeker — coleta semanal (vagas + acadêmico + e-mail)
+Documentation=https://github.com/biancacavsch/academia-seeker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=bianca
+Group=bianca
+WorkingDirectory=/opt/academia-seeker
+ExecStart=/opt/academia-seeker/run_weekly.sh
+Nice=10
+IOSchedulingClass=idle
+MemoryMax=700M
+TimeoutStartSec=3h
+
+[Install]
+WantedBy=multi-user.target

@@ -163,8 +163,9 @@ sources:
 # Call for Papers / Eventos Acadêmicos
 # Fontes para CFPs, conferências, workshops em filosofia/humanidades da tecnologia
 academic_sources:
+  # DESATIVADO no Pi: domínio extinto (DNS -> 0.0.0.0) e exigia Playwright/Chromium.
   - name: upenn_cfp
-    enabled: true
+    enabled: false
     type: html
     url: "https://call-for-papers.sas.upenn.edu"
     category: "publicacao"
@@ -224,8 +225,10 @@ academic_sources:
     category: "event"
     rate_limit: 3.0
 
+  # DESATIVADO no Pi: URL retorna 404 e a fonte exigia Playwright/Chromium.
+  # Substituída por dhsi_feed (RSS oficial, sem navegador).
   - name: dhsi_cfps
-    enabled: true
+    enabled: false
     type: html
     url: "https://dhsi.org/cfps/"
     category: "cfp"
@@ -237,8 +240,10 @@ academic_sources:
       date_selector: "time, .date, .published"
       description_selector: ".entry-content, .post-content, .excerpt"
 
+  # DESATIVADO no Pi: URL retorna 404 e a fonte exigia Playwright/Chromium.
+  # Substituída por ach_rss (RSS oficial, sem navegador).
   - name: ach_announcements
-    enabled: true
+    enabled: false
     type: html
     url: "https://ach.org/category/announcements/"
     category: "event"
@@ -249,6 +254,21 @@ academic_sources:
       link_selector: "a"
       date_selector: "time, .date"
       description_selector: ".entry-content, .excerpt"
+
+  # Substitutos RSS das fontes HTML mortas (sem Playwright, leves no Pi 3B)
+  - name: dhsi_feed
+    enabled: true
+    type: rss
+    url: "https://dhsi.org/feed/"
+    category: "cfp"
+    rate_limit: 5.0
+
+  - name: ach_rss
+    enabled: true
+    type: rss
+    url: "https://ach.org/rss.xml"
+    category: "event"
+    rate_limit: 5.0
 
   # Scraping configurável genérico - adicione suas fontes aqui
   # Exemplo:
@@ -272,7 +292,7 @@ academic_search:
   engines: ["ddgs", "marginalia"]
   timelimit: "m"          # ddgs: d|w|m|y (alinhado à política de 30 dias)
   max_results_per_query: 10
-  page_budget: 100        # teto de páginas baixadas por rodada
+  page_budget: 40         # teto de páginas por rodada (Pi 3B: 1 GB RAM)
   request_delay: 2.0      # segundos entre downloads (educação com os sites)
   exclude_domains:
     - "linkedin.com"
@@ -1027,7 +1047,7 @@ filters:
 # Alertas
 alerts:
   telegram:
-    enabled: true  # defina true + configure bot_token/chat_id em .env
+    enabled: false  # DESATIVADO no Pi — alertas apenas por e-mail (SMTP)
     bot_token: "SEU_BOT_TOKEN_AQUI"
     chat_id: "SEU_CHAT_ID_AQUI"
   email:

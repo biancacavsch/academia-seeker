@@ -1,0 +1,18 @@
+# Dependências para Raspberry Pi 3B / Debian headless (CasaOS + Pi-hole + Trilium)
+#
+# Diferenças em relação a requirements.txt:
+#   - sem playwright (sem Chromium: economia de ~170 MB e de RAM)
+#   - sem python-telegram-bot (Telegram desativado no config.yaml)
+#   - sem apscheduler (não é usado pelo código)
+#
+# Instalar:  .venv/bin/pip install -r requirements-pi.txt
+
+httpx>=0.27.0
+feedparser>=6.0.11
+beautifulsoup4>=4.12.3
+PyYAML>=6.0.1
+python-dotenv>=1.0.1
+langdetect>=1.0.9
+rich>=13.7.0
+ddgs>=9.16.0
+trafilatura>=1.10.0
