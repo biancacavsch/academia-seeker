@@ -33,6 +33,7 @@ wheels/
 # Webview (ajustes locais e segredo de sessão — nunca versionar)
 ui_settings.yaml
 ui_settings.yaml.bak-*
+ui_settings.bak-*
 web/.secret_key
 
 # Databases
