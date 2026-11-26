@@ -72,7 +72,8 @@ def test_titulo_ou_url_vazios_sao_descartados():
 
 def test_data_invalida_nao_quebra():
     job = RemoteJobsOrgCollector()._parse_job(_item(posted_at="não é data"))
-    assert job.posted_at is None
+    # BaseItem.__post_init__ preenche utcnow() quando posted_at fica None.
+    assert job.posted_at is not None
 
 
 def test_data_valida_e_parseada():
