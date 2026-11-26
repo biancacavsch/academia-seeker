@@ -30,6 +30,11 @@ wheels/
 .env.local
 .env.*.local
 
+# Webview (ajustes locais e segredo de sessão — nunca versionar)
+ui_settings.yaml
+ui_settings.yaml.bak-*
+web/.secret_key
+
 # Databases
 *.db
 *.db.*

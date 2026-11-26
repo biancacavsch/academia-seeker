@@ -1,4 +1,8 @@
-"""Configuration loader."""
+"""Configuration loader.
+
+Precedência: config.yaml → ui_settings.yaml (overlay editável pela webview)
+→ variáveis de ambiente (.env, só para segredos).
+"""
 
 import os
 from pathlib import Path
@@ -8,14 +12,42 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CONFIG_PATH = Path(__file__).parent / "config.yaml"
+BASE_DIR = Path(__file__).parent
+CONFIG_PATH = BASE_DIR / "config.yaml"
+UI_SETTINGS_PATH = BASE_DIR / "ui_settings.yaml"
+
+
+def deep_merge(base: dict, override: dict) -> dict:
+    """Mescla `override` sobre `base` recursivamente, sem mutar os originais."""
+    result = dict(base)
+    for key, value in (override or {}).items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_ui_settings() -> dict[str, Any]:
+    """Lê o overlay gravado pela webview. Arquivo ausente = sem ajustes."""
+    if not UI_SETTINGS_PATH.exists():
+        return {}
+    try:
+        with open(UI_SETTINGS_PATH, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        # Nunca deixa uma edição inválida derrubar o pipeline.
+        return {}
 
 
 def load_config() -> dict[str, Any]:
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    # Override secrets from env
+    config = deep_merge(config, load_ui_settings())
+
+    # Override secrets from env (sempre por último)
     if config.get("alerts", {}).get("telegram", {}).get("enabled"):
         config["alerts"]["telegram"]["bot_token"] = os.getenv("TELEGRAM_BOT_TOKEN", "")
         config["alerts"]["telegram"]["chat_id"] = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -30,3 +62,10 @@ def load_config() -> dict[str, Any]:
 
 
 CONFIG = load_config()
+
+
+def reload_config() -> dict[str, Any]:
+    """Recarrega CONFIG em memória (mantém o mesmo objeto importado por outros módulos)."""
+    CONFIG.clear()
+    CONFIG.update(load_config())
+    return CONFIG

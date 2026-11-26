@@ -1,0 +1,45 @@
+# Exemplo do overlay gravado pela webview.
+# Copie para ui_settings.yaml manualmente se quiser, ou use a interface em :8090.
+# Apenas chaves aqui são sobrescritas; o config.yaml original permanece intacto.
+
+filters:
+  min_score_alert: 60
+  min_score_digest: 40
+  max_job_age_days: 30
+  remote_only: true
+
+academic_search:
+  page_budget: 40        # teto rígido: 60 (Pi 3B)
+  request_delay: 2.0     # 1.0 – 10.0 s
+  max_results_per_query: 10
+  timelimit: "m"
+  engines: ["ddgs", "marginalia"]
+  queries:
+    bolsas_pt:
+      - "edital bolsa mestrado humanidades"
+      - "bolsa pesquisa CNPq humanidades digitais"
+
+estagio_search:
+  page_budget: 40
+  request_delay: 2.0
+  engines: ["ddgs"]
+
+relevance:
+  enabled: true
+  use_feedback: true
+  opportunity_gate:
+    enabled: true
+    relaxed_sources: ["wikicfp", "dhnow_cfps", "dhsi_feed"]
+  blocklists:
+    title: ["election", "newsletter", "portraits in dh", "how to"]
+    domain: ["wikipedia.org", "youtube.com", "reddit.com"]
+    url_path: ["/noticia/", "/podcast/"]
+  deduplication:
+    enabled: true
+    prefix_tokens: 3
+
+schedule:
+  mode: "weekly"         # weekly | daily | every_n_days
+  weekday: "sun"
+  time: "03:17"
+  every_n_days: 7

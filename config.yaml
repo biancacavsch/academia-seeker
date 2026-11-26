@@ -1064,6 +1064,7 @@ storage:
   db_path_jobs: "jobs.db"          # vagas/estágios (category = job)
   db_path_academic: "academic.db"  # bolsas/eventos/chamadas (category != job)
   db_path: "items.db"              # legado: backup pré-separação / fallback
+  db_path_feedback: "feedback.db"  # decisões e feedback da calibração
   dedup_by: "url_hash"  # url_hash | title_company
 
 # Execução
@@ -1071,3 +1072,126 @@ runtime:
   user_agent: "Mozilla/5.0 (compatible; JobPipeline/1.0; +https://github.com)"
   timeout: 30
   max_retries: 3
+
+# ===========================================================================
+# Calibração de relevância (editável pela webview via ui_settings.yaml)
+#
+# Gate aplicado ANTES da pontuação: só passa quem Parece vaga/bolsa/chamada/
+# evento. Isto resolve o ruído que o score sozinho não eliminava (notícias e
+# posts institucionais com muitas palavras-chave do tema).
+# ===========================================================================
+relevance:
+  enabled: true
+  use_feedback: true   # bloqueios de domínio/fonte marcados na webview valem aqui
+
+  opportunity_gate:
+    enabled: true
+    # Fontes curadas: título costuma ser o nome do artigo, então a checagem
+    # também olha o começo da descrição. As demais exigem sinal no título.
+    relaxed_sources:
+      - "wikicfp"
+      - "hnet_announcements"
+      - "dhnow_cfps"
+      - "dhnow_conferences"
+      - "philpapers_cfp"
+      - "ala_techsource"
+      - "dhsi_feed"
+      - "euraxess"
+    markers:
+      bolsa:
+        - "edital"
+        - "bolsa"
+        - "bolsas"
+        - "beca"
+        - "becas"
+        - "scholarship"
+        - "fellowship"
+        - "grant"
+        - "financiamento"
+        - "auxílio"
+        - "bursary"
+        - "travel grant"
+        - "call for applications"
+      publicacao:
+        - "call for papers"
+        - "cfp"
+        - "chamada"
+        - "convocatoria"
+        - "submissão"
+        - "submission"
+        - "deadline"
+        - "prazo"
+        - "dossiê"
+        - "special issue"
+        - "proposal"
+        - "call for"
+      evento:
+        - "conference"
+        - "congress"
+        - "workshop"
+        - "symposium"
+        - "seminar"
+        - "summer school"
+        - "conferência"
+        - "congresso"
+        - "encontro"
+        - "evento"
+        - "registration"
+        - "keynote"
+      vaga:
+        - "vaga"
+        - "estágio"
+        - "internship"
+        - "intern"
+        - "hiring"
+        - "job"
+        - "position"
+        - "apply"
+        - "contratação"
+        - "trainee"
+        - "home office"
+
+  blocklists:
+    title:
+      - "election"
+      - "newsletter"
+      - "portraits in dh"
+      - "new liaison"
+      - "newcomer"
+      - "open letter"
+      - "annual general meeting"
+      - "dies aged"
+      - "reflecting on"
+      - "notes from"
+      - "how to"
+      - "guide to"
+      - "dicas para"
+      - "ranking"
+      - "notícia"
+      - "noticia"
+      - "reportagem"
+      - "podcast"
+      - "webinar"
+      - "salário"
+    domain:
+      - "wikipedia.org"
+      - "youtube.com"
+      - "reddit.com"
+      - "quora.com"
+      - "glassdoor.com"
+      - "medium.com"
+    url_path:
+      - "/noticia/"
+      - "/podcast/"
+    regex: []
+
+  deduplication:
+    enabled: true
+    prefix_tokens: 3
+
+# Frequência das rodadas (aplicada ao timer systemd pelo painel web)
+schedule:
+  mode: "weekly"          # weekly | daily | every_n_days
+  weekday: "sun"          # usado no modo weekly
+  time: "03:17"           # hora local (America/Sao_Paulo)
+  every_n_days: 7         # usado no modo every_n_days

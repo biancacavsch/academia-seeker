@@ -69,6 +69,12 @@ class ItemStore:
         self.db_path = db_path or CONFIG["storage"]["db_path"]
         self._init_db()
 
+    def enable_wal(self):
+        """Leituras da webview não travam com a escrita do pipeline semanal."""
+        with self._conn() as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=10000")
+
     def _init_db(self):
         with self._conn() as conn:
             stmts = [s.strip() for s in SCHEMA.split(";") if s.strip()]
@@ -278,6 +284,56 @@ class ItemStore:
             cursor = conn.execute(query, params)
             return [self._row_to_item(dict(row)) for row in cursor.fetchall()]
 
+    def get_items_page(
+        self, limit: int = 25, offset: int = 0, *, q: str = "",
+        source: str = "", category: str = "", track: str = "",
+        min_score: float = 0, order: str = "score",
+    ) -> tuple[list[tuple[BaseItem, bool]], int]:
+        """Lista paginada para a webview. Retorna [(item, alerted), ...], total."""
+        where = ["i.score >= ?"]
+        params: list = [min_score]
+        if q:
+            where.append("(i.title LIKE ? OR i.description LIKE ? OR i.company LIKE ?)")
+            params.extend([f"%{q}%"] * 3)
+        if source:
+            where.append("i.source = ?")
+            params.append(source)
+        if category:
+            where.append("i.category = ?")
+            params.append(category)
+        if track:
+            where.append("i.track = ?")
+            params.append(track)
+        clause = " AND ".join(where)
+        order_sql = {
+            "score": "i.score DESC, i.posted_at DESC",
+            "recent": "i.posted_at DESC",
+            "deadline": "i.submission_deadline ASC",
+            "title": "i.title ASC",
+        }.get(order, "i.score DESC")
+        with self._conn() as conn:
+            total = conn.execute(
+                f"SELECT COUNT(*) FROM items i WHERE {clause}", params).fetchone()[0]
+            rows = conn.execute(
+                f"""SELECT i.*, a.url_hash AS alerted FROM items i
+                    LEFT JOIN alerts_sent a ON i.url_hash = a.url_hash
+                    WHERE {clause} ORDER BY {order_sql} LIMIT ? OFFSET ?""",
+                params + [limit, offset],
+            ).fetchall()
+            return [
+                (self._row_to_item(dict(row)), bool(row["alerted"])) for row in rows
+            ], total
+
+    def get_all_items(self) -> list[BaseItem]:
+        with self._conn() as conn:
+            return [self._row_to_item(dict(row)) for row in conn.execute(
+                "SELECT * FROM items")]
+
+    def get_sources(self) -> list[str]:
+        with self._conn() as conn:
+            return [r[0] for r in conn.execute(
+                "SELECT DISTINCT source FROM items ORDER BY source")]
+
     def get_stats(self) -> dict:
         with self._conn() as conn:
             total = conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
@@ -298,13 +354,17 @@ class ItemStore:
 def get_jobs_store() -> ItemStore:
     """Store do banco de vagas/estágios (jobs.db)."""
     cfg = CONFIG.get("storage", {})
-    return ItemStore(cfg.get("db_path_jobs") or cfg.get("db_path"))
+    store = ItemStore(cfg.get("db_path_jobs") or cfg.get("db_path"))
+    store.enable_wal()
+    return store
 
 
 def get_academic_store() -> ItemStore:
     """Store do banco acadêmico: bolsas/eventos/chamadas (academic.db)."""
     cfg = CONFIG.get("storage", {})
-    return ItemStore(cfg.get("db_path_academic") or cfg.get("db_path"))
+    store = ItemStore(cfg.get("db_path_academic") or cfg.get("db_path"))
+    store.enable_wal()
+    return store
 
 
 # Backward compatibility

@@ -17,6 +17,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from config import CONFIG
 from store import ItemStore, get_jobs_store, get_academic_store
 from score import score_item
+from relevance import deduplicate
 from collectors.registry import get_job_collectors, get_academic_collectors
 from alerts import AlertManager
 from models import Job, AcademicItem, BaseItem, academic_section, TRACK_EMOJI
@@ -50,7 +51,7 @@ def run_job_collection(store: ItemStore, verbose: bool = False) -> List[Job]:
         for collector in collectors:
             task = progress.add_task(f"Coletando vagas {collector.name}...", total=None)
             try:
-                for job in collector.fetch():
+                for job in deduplicate(collector.fetch()):
                     job = score_item(job)
                     if job.score >= CONFIG["filters"]["min_score_digest"] - 10:
                         is_new = store.upsert_item(job)
@@ -80,7 +81,7 @@ def run_academic_collection(store: ItemStore, verbose: bool = False) -> List[Aca
         for collector in collectors:
             task = progress.add_task(f"Coletando acadêmico {collector.name}...", total=None)
             try:
-                for item in collector.fetch():
+                for item in deduplicate(collector.fetch()):
                     item = score_item(item)
                     if item.score >= CONFIG["filters"]["min_score_digest"] - 10:
                         is_new = store.upsert_item(item)
@@ -115,6 +116,16 @@ def run_alerts(store: ItemStore, channel: str = "both", category: str = None, ki
 
     alert_mgr = AlertManager()
     failed = alert_mgr.send_alerts(unalerted, channel=channel) or set()
+
+    try:
+        from feedback import get_feedback_store
+        fb = get_feedback_store()
+        for item in unalerted:
+            if item.url_hash not in failed:
+                fb.record(item, "alerted",
+                          ", ".join(item.matched_keywords[:3]))
+    except Exception as exc:
+        logger.warning(f"Não foi possível registrar feedback: {exc}")
 
     # Só marca o que de fato foi enviado (falha de envio fica para a próxima)
     sent = 0
@@ -411,6 +422,90 @@ def export_csv(stores, output: str, days: int = 30, min_score: float = 0, catego
     console.print(f"[green]✓ Exportado {len(items)} itens para {output}[/green]")
 
 
+def cmd_audit():
+    """Mostra precisão por fonte e os motivos de rejeição mais comuns."""
+    from feedback import get_feedback_store
+    fb = get_feedback_store()
+
+    for store, titulo in ((get_jobs_store(), "Vagas"),
+                          (get_academic_store(), "Acadêmico")):
+        stats = store.get_stats()
+        console.print(f"[bold cyan]📊 {titulo}: {stats['total_items']} itens, "
+                      f"{stats['alerted']} alertados[/bold cyan]")
+        table = Table()
+        table.add_column("Fonte")
+        table.add_column("Itens", justify="right")
+        table.add_column("Score médio", justify="right")
+        for source, qtd in sorted(stats["by_source"].items(),
+                                  key=lambda x: -x[1])[:20]:
+            table.add_row(source, str(qtd), str(stats["avg_score"]))
+        console.print(table)
+
+    console.print("\n[bold cyan]🎯 Precisão por fonte (feedback da webview)[/bold cyan]")
+    table = Table()
+    table.add_column("Fonte")
+    table.add_column("Alertados", justify="right")
+    table.add_column("✓", justify="right")
+    table.add_column("✗", justify="right")
+    table.add_column("Precisão", justify="right")
+    for row in fb.precision_by_source():
+        table.add_row(row["source"], str(row["alerted"]), str(row["relevant"]),
+                      str(row["irrelevant"]),
+                      f"{row['precision']}%" if row["precision"] is not None else "—")
+    console.print(table)
+
+    console.print("\n[bold cyan]🚫 Rejeições mais comuns[/bold cyan]")
+    from collections import Counter
+    rejections = Counter()
+    for store in (get_jobs_store(), get_academic_store()):
+        for item in store.get_all_items():
+            if item.score < 0 and item.matched_keywords:
+                rejections[item.matched_keywords[0]] += 1
+    for reason, qtd in rejections.most_common(12):
+        console.print(f"  {qtd:5d}  {reason}")
+
+
+def cmd_simulate():
+    """Prévia exata do que seria enviado por e-mail agora (sem enviar)."""
+    for store, titulo, kind in (
+        (get_jobs_store(), "Vagas", "job"),
+        (get_academic_store(), "Acadêmico", "academic"),
+    ):
+        min_score = CONFIG["filters"]["min_score_alert"]
+        itens = store.get_unalerted_items(min_score=min_score, kind=kind)
+        items_to_send = [i for i in itens if i.score >= min_score]
+        console.print(f"[bold cyan]📧 {titulo}: {len(items_to_send)} item(ns) "
+                      f"seriam enviados (score ≥ {min_score})[/bold cyan]")
+        for item in items_to_send[:25]:
+            console.print(f"  • {item.score:5.1f}  {item.title[:70]} "
+                          f"[dim]({item.source})[/dim]")
+        if len(items_to_send) > 25:
+            console.print(f"  ... e mais {len(items_to_send) - 25}")
+
+
+def cmd_reprocess(apply: bool = False):
+    """Reaplica os filtros atuais aos itens já salvos nos bancos."""
+    from feedback import get_feedback_store
+    fb = get_feedback_store()
+    changed = 0
+    total = 0
+    for store in (get_jobs_store(), get_academic_store()):
+        for item in store.get_all_items():
+            total += 1
+            old = item.score
+            score_item(item)
+            if item.score != old:
+                changed += 1
+                fb.record(item, "rejected" if item.score < 0 else "kept",
+                          item.matched_keywords[0] if item.matched_keywords else "")
+                if apply:
+                    store.upsert_item(item)
+    console.print(f"[green]{'Aplicado' if apply else 'Simulado'}: "
+                  f"{changed}/{total} itens mudariam de score[/green]")
+    if not apply:
+        console.print("[dim]Use --apply para gravar as novas pontuações.[/dim]")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Job & Academic Pipeline - Vagas remotas + CFPs/Eventos em Humanidades Digitais, Filosofia da Tecnologia, Divulgação Científica",
@@ -469,6 +564,14 @@ Comandos principais:
     export_parser.add_argument("--db", choices=["jobs", "academic", "all"], default="all",
                                help="Banco de origem (default: ambos)")
 
+    # Calibração / auditoria
+    subparsers.add_parser("audit", help="Precisão por fonte e motivos de rejeição")
+    subparsers.add_parser("simulate", help="Prévia do que seria alertado (sem enviar)")
+    reprocess_parser = subparsers.add_parser(
+        "reprocess", help="Reaplica filtros aos itens já salvos")
+    reprocess_parser.add_argument("--apply", action="store_true",
+                                  help="Grava as novas pontuações no banco")
+
     # Test alerts
     subparsers.add_parser("test-alerts", help="Testa configuração de alertas")
 
@@ -518,6 +621,12 @@ Comandos principais:
             if args.db in ("academic", "all"):
                 stores.append(get_academic_store())
             export_csv(stores, args.output, args.days, args.min_score, cat, args.track)
+        elif args.command == "audit":
+            cmd_audit()
+        elif args.command == "simulate":
+            cmd_simulate()
+        elif args.command == "reprocess":
+            cmd_reprocess(args.apply)
         elif args.command == "test-alerts":
             test_alerts()
     except KeyboardInterrupt:

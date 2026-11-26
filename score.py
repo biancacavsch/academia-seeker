@@ -217,6 +217,14 @@ class Scorer:
                     if p.search(tl):
                         return self._reject(item, "filtered: job listing/guide")
 
+        # Gate final de oportunidade / blocklists (configurável pela webview).
+        # Fica depois dos gates históricos para preservar os motivos já
+        # conhecidos nos testes e nos logs ("not in interests", etc.).
+        from relevance import check_opportunity
+        ok, reason = check_opportunity(item)
+        if not ok:
+            return self._reject(item, reason)
+
         all_matches = []
         score = 0.0
 
