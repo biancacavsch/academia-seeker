@@ -1,0 +1,259 @@
+id: patrimonio-historia
+scope: academic
+name: Patrimônio e história
+description: 'Interesses da minha namorada: patrimônio cultural, história, arquivos
+  e museus.'
+enabled: true
+config:
+  academic_search:
+    queries:
+      bolsas_pt:
+      - edital bolsa mestrado história patrimônio cultural
+      - bolsa pesquisa patrimônio histórico arquivos
+      - edital bolsa museologia patrimônio cultural
+      - bolsa mestrado história cultural Brasil
+      - edital PIBIC história patrimônio cultural
+      publicacoes_pt:
+      - chamada de artigos patrimônio cultural história
+      - chamada de trabalhos museologia patrimônio
+      - dossiê revista história patrimônio cultural
+      - chamada de artigos arquivos e memória
+      eventos_pt:
+      - congresso história patrimônio cultural 2027
+      - workshop museologia patrimônio digital
+      - seminário patrimônio histórico 2027
+      bolsas_en:
+      - digital humanities fellowship master
+      - master scholarship humanities technology
+      - philosophy of technology fellowship
+      - humanities master exchange scholarship
+      - science communication fellowship
+      - humanities research fellowship 2027
+      - digital heritage research grant
+      bolsas_es:
+      - beca maestría humanidades
+      - beca investigación humanidades digitales
+      - beca intercambio maestría
+      - convocatoria beca filosofía tecnología
+      - beca latinoamericana humanidades digitales
+      - convocatoria beca ciencias sociales Latinoamérica
+      publicacoes_en:
+      - call for papers digital humanities
+      - call for papers philosophy of technology
+      - CFP sociology of technology
+      - special issue science communication journal
+      - call for panels digital humanities 2027
+      - CFP cultural heritage digital
+      publicacoes_es:
+      - convocatoria artículos humanidades digitales
+      - convocatoria trabajos filosofía tecnología
+      - convocatoria ponencias comunicación digital
+      - convocatoria dossiê revista humanidades
+      eventos_en:
+      - digital humanities conference 2027
+      - philosophy of technology conference
+      - science communication conference 2027
+      - digital methods conference 2027
+      eventos_es:
+      - congreso humanidades digitales
+      - congreso filosofía tecnología
+      - congreso comunicación digital Latinoamérica 2027
+      - jornada ciencias sociales Latinoamérica 2027
+    page_budget: 30
+  keywords:
+    glam:
+    - patrimônio
+    - patrimônio cultural
+    - história
+    - museus
+    - arquivos históricos
+    - preservação
+    - memória cultural
+    core:
+    - história
+    - patrimônio cultural
+    - museologia
+    - arquivologia
+    scicomm:
+    - science communication
+    - divulgação científica
+    - divulgacao cientifica
+    - comunicação científica
+    - comunicacion cientifica
+    - science outreach
+    - public engagement science
+    - engajamento público ciência
+    - cultural dissemination
+    - divulgação cultural
+    - divulgacion cultural
+    - science writing
+    - escrita científica
+    - escritura cientifica
+    - scientific journalism
+    - jornalismo científico
+    - periodismo científico
+    - research communication
+    - comunicação de pesquisa
+    - comunicacion de investigacion
+    - open science
+    - ciência aberta
+    - ciencia abierta
+    - knowledge translation
+    - tradução do conhecimento
+    - public understanding of science
+    digital_humanities:
+    - digital humanities conference
+    - conferência humanidades digitais
+    - conferencia humanidades digitales
+    - dh conference
+    - dh workshop
+    - digital humanities workshop
+    - humanidades digitais workshop
+    - digital methods
+    - métodos digitais
+    - text analysis
+    - análise de texto
+    - text mining
+    - mineração de texto
+    - network analysis
+    - análise de redes
+    - spatial humanities
+    - humanidades espaciais
+    - cultural analytics
+    - analytics culturais
+    - computational literary studies
+    - estudos literários computacionais
+    - cultural heritage computing
+    - patrimônio cultural computacional
+    philosophy_tech:
+    - philosophy of technology
+    - filosofia da tecnologia
+    - filosofia de la tecnología
+    - philosophy of science
+    - filosofia da ciência
+    - filosofia de la ciencia
+    - ethics of technology
+    - ética da tecnologia
+    - ética de la tecnología
+    - critical theory
+    - teoria crítica
+    - teoria critica
+    - phenomenology of technology
+    - fenomenologia da tecnologia
+    - posthumanism
+    - pós-humanismo
+    - poshumanismo
+    - technological mediation
+    - mediação tecnológica
+    - science and technology studies
+    - sts
+    - estudos ciência tecnologia
+    - tecnociencia
+    - technoscience
+    cfp_specific:
+    - call for papers
+    - chamada de artigos
+    - convocatoria de articulos
+    - call for contributions
+    - call for abstracts
+    - submission deadline
+    - prazo de submissão
+    - plazo de envio
+    - paper submission
+    - submissão de artigo
+    - envio de artigo
+    - abstract submission
+    - submissão de resumo
+    - conference proceedings
+    - anais de conferência
+    - special issue
+    - edição especial
+    - numero especial
+    - journal special issue
+    - workshop proposal
+    - proposta de workshop
+    - panel proposal
+    - proposta de painel
+    education_fit:
+    - social sciences
+    - social science
+    - ciências sociais
+    - ciencias sociales
+    - humanities
+    - humanidades
+    - humanidades
+    - mestrado
+    - maestría
+    - masters student
+    - estudante de mestrado
+    - estudiante de maestría
+    - graduate student
+    - pós-graduação
+    - pos-graduacao
+    - posgrado
+    - any degree
+    - qualquer formação
+    - cualquier titulación
+    - early career
+    - início de carreira
+    - jovem pesquisador
+    - young researcher
+    broad:
+    - history
+    - historian
+    - história
+    - historia
+    - historiador
+    - historiadora
+    - museum
+    - museums
+    - museu
+    - museus
+    - museo
+    - museos
+    - archive
+    - archives
+    - archivist
+    - arquivo
+    - arquivos
+    - arquivista
+    - archivo
+    - archivos
+    - library
+    - libraries
+    - librarian
+    - biblioteca
+    - bibliotecas
+    - bibliotecário
+    - bibliotecario
+    - curator
+    - curatorial
+    - curador
+  filters:
+    interests:
+    - história
+    - patrimônio cultural
+    - museus
+    - arquivos
+    - memória
+    - herança cultural
+    exclude_areas:
+    - direito
+    - advocacia
+    - advogado
+    - advogada
+    - jurídico
+    - juridico
+    - legal
+    - law
+    - attorney
+    - segurança do trabalho
+    - seguranca do trabalho
+    - occupational safety
+    - safety technician
+    - medicina
+    - enfermagem
+    - enfermeiro
+    - nursing
+    - odontologia
+updated_at: '2026-11-26 20:47:29'
