@@ -1,7 +1,7 @@
 """RemoteJobs.org API collector."""
 
 import logging
-from typing import Iterator
+from typing import Iterator, Optional
 
 from collectors import APICollector
 from models import Job
@@ -34,7 +34,9 @@ class RemoteJobsOrgCollector(APICollector):
 
             for item in jobs_data:
                 try:
-                    yield self._parse_job(item)
+                    job = self._parse_job(item)
+                    if job:
+                        yield job
                 except Exception as e:
                     logger.warning(f"Failed to parse RemoteJobs.org job: {e}")
 
@@ -44,40 +46,65 @@ class RemoteJobsOrgCollector(APICollector):
 
             self._sleep()
 
-    def _parse_job(self, item: dict) -> Job:
-        company = item.get("company", {})
-        company_name = company.get("name", "") if isinstance(company, dict) else str(company)
+    @staticmethod
+    def _text(value, default: str = "") -> str:
+        """Converte campos da API (que podem virar None) em texto seguro."""
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, (dict, list, bool)):
+            return default
+        return str(value).strip()
 
-        category = item.get("category", {})
-        cat_name = category.get("name", "") if isinstance(category, dict) else str(category)
+    @staticmethod
+    def _int(value) -> Optional[int]:
+        """Salário pode chegar como int, float, string ou None."""
+        if value is None or isinstance(value, bool):
+            return None
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
+    def _parse_job(self, item: dict) -> Optional[Job]:
+        title = self._text(item.get("title"))
+        url = self._text(item.get("url"))
+        if not title or not url:
+            # A API devolve itens incompletos; não viram lixo no banco.
+            return None
+
+        company = item.get("company")
+        company_name = self._text(
+            company.get("name") if isinstance(company, dict) else company
+        )
+
+        category = item.get("category")
+        cat_name = self._text(
+            category.get("name") if isinstance(category, dict) else category
+        )
         tags = [cat_name] if cat_name else []
 
-        job_type = item.get("type", "")
-        remote = True  # RemoteJobs.org só tem vagas remotas
-
         posted_at = None
-        if item.get("posted_at"):
+        raw_date = self._text(item.get("posted_at"))
+        if raw_date:
             try:
                 from datetime import datetime
-                posted_at = datetime.fromisoformat(item["posted_at"].replace("Z", "+00:00"))
+                posted_at = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
             except Exception:
                 pass
 
-        salary_min = item.get("salary_min")
-        salary_max = item.get("salary_max")
-        salary_text = item.get("salary_text", "")
-
         return Job(
-            title=item.get("title", "").strip(),
-            company=company_name.strip(),
-            location=item.get("location", "Remote").strip(),
-            remote=remote,
-            url=item.get("url", "").strip(),
-            description=item.get("description", "").strip(),
+            title=title,
+            company=company_name,
+            location=self._text(item.get("location"), "Remote"),
+            remote=True,  # RemoteJobs.org só tem vagas remotas
+            url=url,
+            description=self._text(item.get("description")),
             source="remotejobs_org",
             tags=tags,
             posted_at=posted_at,
-            salary_min=salary_min,
-            salary_max=salary_max,
-            salary_text=salary_text,
+            salary_min=self._int(item.get("salary_min")),
+            salary_max=self._int(item.get("salary_max")),
+            salary_text=self._text(item.get("salary_text")),
         )
