@@ -183,6 +183,74 @@ Os bancos `jobs.db`, `academic.db` e `items.db` são criados na primeira execuç
 ```bash
 cd /opt/academia-seeker
 git pull --ff-only
-.venv/bin/pip install -r requirements-pi.txt
-sudo systemctl restart academia-seeker.service
+.venv/bin/pip install -r requirements-pi.txt -r requirements-web.txt
+sudo systemctl restart academia-seeker-web.service
 ```
+
+## 9. Webview (painel web)
+
+Interface PT-BR em `http://192.168.11.127:8090` (ou pelo Tailscale). Leve:
+Flask + waitress (2 threads), `MemoryMax=192M`, sem Node/Docker/CDN.
+
+### 9.1 Instalação
+
+```bash
+cd /opt/academia-seeker
+.venv/bin/pip install -r requirements-web.txt
+
+# Senha do painel (escolha uma):
+.venv/bin/python - <<'PY'
+from werkzeug.security import generate_password_hash
+print(generate_password_hash('SUA_SENHA_AQUI'))
+PY
+# cole o hash no .env: WEB_PASSWORD_HASH=<hash>
+# (alternativa simples, menos segura: WEB_PASSWORD=senha)
+
+sudo install -m 755 deploy/academia-seeker-ctl /usr/local/bin/academia-seeker-ctl
+sudo install -m 440 deploy/academia-seeker-web.sudoers /etc/sudoers.d/academia-seeker-ctl
+sudo install -m 644 deploy/academia-seeker-web.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now academia-seeker-web.service
+sudo systemctl status academia-seeker-web.service --no-pager
+```
+
+### 9.2 O que dá para fazer
+
+| Tela | Recursos |
+|---|---|
+| Visão geral | contadores, status, próxima rodada, **Rodar agora**, prazos |
+| Acadêmico / Vagas | busca, filtros, paginação, export CSV, motivos do score |
+| Calibração | fila de revisão: relevante / irrelevante / bloquear domínio / bloquear fonte; precisão por fonte |
+| Ajustes | keywords (≤30/grupo), páginas (teto 60), pausa (1–10 s), resultados, idiomas, fontes, gate, agenda |
+| Sistema | RAM/swap/disco, commit, log ao vivo,health de CasaOS/Pi-hole/Trilium/nginx |
+
+### 9.3 Como a configuração é gravada
+
+- `config.yaml` **não é alterado** (continua versionado).
+- A webview grava só chaves da whitelist em `/opt/academia-seeker/ui_settings.yaml`
+  (escrita atômica + backup), com validação de limites no servidor.
+- Precedência: `config.yaml` → `ui_settings.yaml` → `.env` (segredos).
+- Alterações valem na próxima invocação do pipeline. Botões “Rodar agora” e
+  “Aplicar agenda” usam o helper root `academia-seeker-ctl` (allowlist).
+
+### 9.4 Calibração de relevância
+
+O ruído dos e-mails (eleições da ACH, newsletters, notícias) é tratado em
+`relevance.py`, **antes** da pontuação:
+
+- gate de oportunidade (bolsa / chamada / evento / vaga),
+- blocklists de título, domínio e trecho de URL,
+- dedup por título normalizado (resolve as 4 variantes do mesmo estágio),
+- bloqueios vindos da fila de revisão da webview.
+
+Comandos úteis:
+
+```bash
+.venv/bin/python -m main audit       # precisão por fonte + motivos de rejeição
+.venv/bin/python -m main simulate    # prévia do que iria por e-mail
+.venv/bin/python -m main reprocess   # simula rescore dos itens já salvos
+.venv/bin/python -m main reprocess --apply   # aplica o rescore
+```
+
+Se o gate ficar agressivo demais, desligue em **Ajustes → Calibração das
+pesquisas → Gate de oportunidade**, ou adicione a fonte em `relaxed_sources`.

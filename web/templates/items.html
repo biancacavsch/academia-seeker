@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block title %}Itens{% endblock %}
+{% macro qs(page) -%}
+db={{ db }}&q={{ q|urlencode }}&source={{ source|urlencode }}&category={{ category }}&track={{ track }}&min_score={{ min_score }}&order={{ order }}&page={{ page }}
+{%- endmacro %}
+{% block content %}
+<div class="top">
+  <div><h1>{{ 'Vagas e estágios' if db=='jobs' else 'Bolsas, eventos e publicações' }}</h1>
+    <div class="sub">{{ total }} item(ns) encontrado(s)</div></div>
+  <div class="row">
+    <a class="btn sm" href="{{ url_for('items', db='jobs') }}">💼 Vagas</a>
+    <a class="btn sm" href="{{ url_for('items', db='academic') }}">🎓 Acadêmico</a>
+    <a class="btn sm" href="{{ url_for('export_csv', db=db, q=q, source=source, min_score=min_score) }}">⬇ CSV</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <form method="get" class="row">
+    <input type="hidden" name="db" value="{{ db }}">
+    <div style="flex:2;min-width:200px"><label>Buscar</label>
+      <input name="q" value="{{ q }}" placeholder="título, descrição, empresa..."></div>
+    <div style="flex:1;min-width:140px"><label>Fonte</label>
+      <select name="source" data-auto-submit><option value="">Todas</option>
+        {% for s in sources %}<option value="{{ s }}" {{ 'selected' if s==source }}>{{ s }}</option>{% endfor %}</select></div>
+    <div style="flex:1;min-width:120px"><label>Score mín.</label>
+      <input name="min_score" type="number" value="{{ min_score }}" min="0" max="300"></div>
+    <div style="flex:1;min-width:130px"><label>Ordenar</label>
+      <select name="order" data-auto-submit>
+        <option value="score" {{ 'selected' if order=='score' }}>Score</option>
+        <option value="recent" {{ 'selected' if order=='recent' }}>Recentes</option>
+        <option value="deadline" {{ 'selected' if order=='deadline' }}>Prazo</option>
+        <option value="title" {{ 'selected' if order=='title' }}>Título</option>
+      </select></div>
+    <div style="align-self:end"><button class="btn primary" type="submit">Filtrar</button></div>
+  </form>
+</div>
+
+<div class="card pad0">
+{% if rows %}
+<table>
+  <thead><tr><th style="width:62%">Item</th><th>Fonte</th><th>Trilha</th><th>Score</th><th>Data</th></tr></thead>
+  <tbody>
+  {% for item, alerted in rows %}
+    <tr>
+      <td><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+        {% if alerted %}<span class="pill ok" style="margin-left:6px">enviado</span>{% endif %}
+        <div class="hint">{{ (item.description or '')[:150] }}</div>
+        <div>{% for kw in item.matched_keywords[:4] %}<span class="tag">{{ kw }}</span>{% endfor %}</div>
+      </td>
+      <td><span class="tag">{{ item.source }}</span></td>
+      <td><span class="tag track">{{ item.track or item.category }}</span></td>
+      <td><span class="tag score">{{ item.score }}</span></td>
+      <td class="hint">{{ item.posted_at.strftime('%d/%m/%y') if item.posted_at else '—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<div class="empty">Nenhum item com esses filtros.</div>{% endif %}
+</div>
+
+<div class="pager">
+  {% if page>1 %}<a class="btn sm" href="{{ url_for('items', db=db, q=q, source=source, category=category, track=track, min_score=min_score, order=order, page=page-1) }}">← anterior</a>{% endif %}
+  <span class="hint">página {{ page }} de {{ pages }}</span>
+  {% if page<pages %}<a class="btn sm" href="{{ url_for('items', db=db, q=q, source=source, category=category, track=track, min_score=min_score, order=order, page=page+1) }}">próxima →</a>{% endif %}
+</div>
+{% endblock %}

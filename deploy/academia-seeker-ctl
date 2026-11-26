@@ -1,0 +1,53 @@
+#!/bin/bash
+# Helper root com allowlist estrita — chamado pela webview via sudo NOPASSWD.
+# Nunca aceita argumentos arbitrários: apenas start|stop|status|apply-schedule|logs.
+set -euo pipefail
+
+PROJECT="${ACADEMIA_DIR:-/opt/academia-seeker}"
+SERVICE="academia-seeker.service"
+TIMER="academia-seeker.timer"
+ACTION="${1:-}"
+
+case "$ACTION" in
+  start)
+    systemctl start "$SERVICE"
+    echo "coleta iniciada"
+    ;;
+  stop)
+    systemctl stop "$SERVICE"
+    echo "coleta interrompida"
+    ;;
+  status)
+    echo "serviço: $(systemctl is-active "$SERVICE")"
+    echo "timer:   $(systemctl is-enabled "$TIMER" 2>/dev/null || echo desativado)"
+    systemctl list-timers "$TIMER" --no-pager -n 1 2>/dev/null | sed -n '2p' || true
+    ;;
+  apply-schedule)
+    EXPR="$("$PROJECT/.venv/bin/python" - <<'PY'
+import sys
+sys.path.insert(0, "/opt/academia-seeker")
+from web.services import schedule_expression
+print(schedule_expression())
+PY
+)"
+    DIR="/etc/systemd/system/${TIMER}.d"
+    mkdir -p "$DIR"
+    # OnCalendar vazio limpa o valor do unit antes de aplicar o novo.
+    cat > "$DIR/10-web.conf" <<EOF
+[Timer]
+OnCalendar=
+OnCalendar=$EXPR
+EOF
+    systemctl daemon-reload
+    systemctl restart "$TIMER"
+    echo "agenda aplicada: $EXPR"
+    ;;
+  logs)
+    latest=$(ls -t "$PROJECT"/logs/weekly_*.log 2>/dev/null | head -1)
+    if [ -n "$latest" ]; then tail -n 40 "$latest"; else echo "sem logs"; fi
+    ;;
+  *)
+    echo "ação inválida: $ACTION" >&2
+    exit 2
+    ;;
+esac

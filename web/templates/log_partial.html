@@ -1,0 +1,4 @@
+<div id="live-log" data-running="{{ '1' if state in ('active','activating') else '0' }}">
+  <pre class="log">{{ log }}</pre>
+</div>
+<div class="hint">{{ 'Atualizando a cada 7s enquanto a coleta roda…' if state in ('active','activating') else 'Última leitura.' }}</div>

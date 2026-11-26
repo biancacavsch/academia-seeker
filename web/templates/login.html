@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar · academia-seeker</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"></head>
+<body><div class="login-wrap"><div class="login-card">
+  <h1>✦ academia-seeker</h1>
+  <div class="sub">Painel de controle no Raspberry Pi</div>
+  {% if message %}<div class="alert error" style="margin-top:18px">{{ message }}</div>{% endif %}
+  <form method="post" style="margin-top:22px">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <div class="field"><label>Senha</label>
+      <input type="password" name="password" autofocus required autocomplete="current-password"></div>
+    <button class="btn primary" style="width:100%" type="submit">Entrar</button>
+  </form>
+</div></div></body></html>

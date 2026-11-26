@@ -1,0 +1,26 @@
+[Unit]
+Description=academia-seeker webview (Flask + waitress)
+Documentation=https://github.com/biancacavsch/academia-seeker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bianca
+Group=bianca
+WorkingDirectory=/opt/academia-seeker
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/opt/academia-seeker/.env
+MemoryMax=192M
+CPUQuiet=30%
+Nice=5
+ExecStart=/opt/academia-seeker/.venv/bin/waitress-serve --host=0.0.0.0 --port=8090 --threads=2 web.app:app
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/academia-seeker
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

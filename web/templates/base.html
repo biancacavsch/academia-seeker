@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}academia-seeker{% endblock %} · Pi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+<div class="app">
+  <nav class="side">
+    <div class="logo">✦ academia-seeker</div>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'on' if request.endpoint=='dashboard' }}">🏠 Visão geral</a>
+    <a href="{{ url_for('items', db='academic') }}" class="{{ 'on' if request.endpoint=='items' and request.args.get('db','academic')!='jobs' }}">🎓 Acadêmico</a>
+    <a href="{{ url_for('items', db='jobs') }}" class="{{ 'on' if request.endpoint=='items' and request.args.get('db')=='jobs' }}">💼 Vagas</a>
+    <a href="{{ url_for('revisao') }}" class="{{ 'on' if request.endpoint=='revisao' }}">✅ Calibração</a>
+    <a href="{{ url_for('ajustes') }}" class="{{ 'on' if request.endpoint=='ajustes' }}">⚙️ Ajustes</a>
+    <a href="{{ url_for('sistema') }}" class="{{ 'on' if request.endpoint=='sistema' }}">🖥️ Sistema</a>
+    <div class="foot">Raspberry Pi 3B · {{ web_user }}</div>
+  </nav>
+  <main class="main">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}<div class="alert {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+    <div style="margin-top:28px;text-align:center;color:#94a3b8;font-size:12px">
+      academia-seeker · rodado no Pi · <a href="{{ url_for('logout') }}">sair</a>
+    </div>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

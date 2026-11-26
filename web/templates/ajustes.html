@@ -1,0 +1,128 @@
+{% extends "base.html" %}{% block title %}Ajustes{% endblock %}
+{% block content %}
+<div class="top">
+  <div><h1>Ajustes</h1><div class="sub">Mude o que o Pi pesquisa — sem editar YAML na mão.</div></div>
+  <form method="post" action="{{ url_for('ajustes_reset') }}" data-confirm="Restaurar todos os ajustes ao original?">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <button class="btn" type="submit">↺ Restaurar padrão</button>
+  </form>
+</div>
+
+<form method="post" id="settings-form">
+<input type="hidden" name="csrf" value="{{ csrf_token() }}">
+
+<details open>
+  <summary>⚡ Presets rápidos <span class="hint">um clique, depois ajuste fino abaixo</span></summary>
+  <div class="body">
+    <div class="row">
+      <button class="btn" type="submit" name="preset" value="leve">🌱 Leve <span class="hint">20 páginas · 3s</span></button>
+      <button class="btn" type="submit" name="preset" value="equilibrado">⚖️ Equilibrado <span class="hint">40 páginas · 2s</span></button>
+      <button class="btn" type="submit" name="preset" value="profundo" data-confirm="Perfil Profundo usa até 60 páginas e pode levar mais de 40 min no Pi. Continuar?">🔥 Profundo <span class="hint">60 páginas</span></button>
+    </div>
+    <div class="hint">O preset é mesclado aos ajustes atuais; os campos abaixo têm prioridade se forem alterados no mesmo envio.</div>
+  </div>
+</details>
+
+<details>
+  <summary>🕒 Quando rodar <span class="hint">agenda do systemd timer</span></summary>
+  <div class="body grid g2">
+    <div class="field"><label>Frequência</label>
+      <select name="schedule_mode">
+        {% set mode = view.schedule.get('mode','weekly') %}
+        <option value="weekly" {{ 'selected' if mode=='weekly' }}>Semanal</option>
+        <option value="daily" {{ 'selected' if mode=='daily' }}>Diária</option>
+        <option value="every_n_days" {{ 'selected' if mode=='every_n_days' }}>A cada N dias</option>
+      </select></div>
+    <div class="field"><label>Dia da semana</label>
+      <select name="schedule_weekday">
+        {% for v,l in [('mon','Segunda'),('tue','Terça'),('wed','Quarta'),('thu','Quinta'),('fri','Sexta'),('sat','Sábado'),('sun','Domingo')] %}
+        <option value="{{ v }}" {{ 'selected' if v==view.schedule.get('weekday','sun') }}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Hora (local do Pi)</label>
+      <input name="schedule_time" type="time" value="{{ view.schedule.get('time','03:17') }}"></div>
+    <div class="field"><label>A cada N dias</label>
+      <input name="schedule_every_n_days" type="number" min="1" max="30" value="{{ view.schedule.get('every_n_days',7) }}"></div>
+  </div>
+  <div class="hint">Depois de salvar, clique em <b>Aplicar agenda</b> na página Sistema (ou aqui, no rodapé) para atualizar o timer.</div>
+</details>
+
+<details>
+  <summary>🔍 Volume e velocidade <span class="hint">respeita os limites do Pi</span></summary>
+  <div class="body grid g2">
+    {% for f in view.numbers %}
+    <div class="field"><label>{{ f.label }}</label>
+      <input name="{{ f.field }}" type="number" min="{{ f.min }}" max="{{ f.max }}" step="{{ f.step }}" value="{{ f.value }}">
+      <div class="hint">limite: {{ f.min }}–{{ f.max }}</div></div>
+    {% endfor %}
+    {% for f in view.selects %}
+    <div class="field"><label>{{ f.label }}</label>
+      {% set multiple = f.field in ('sel:academic_search:engines','sel:estagio_search:engines') %}
+      <select name="{{ f.field }}" {{ 'multiple' if multiple }} size="{{ 2 if multiple else 1 }}">
+        {% for o in f.options %}<option value="{{ o }}" {{ 'selected' if o in f.selected }}>{{ o }}</option>{% endfor %}
+      </select></div>
+    {% endfor %}
+  </div>
+  <div class="alert ok">Teto de páginas por rodada: <b>60</b>. O Pi 3B tem ~1 GB RAM; o painel impede valores maiores.</div>
+</details>
+
+<details>
+  <summary>🎯 Calibração das pesquisas <span class="hint">o que entra ou não nos e-mails</span></summary>
+  <div class="body">
+    <div class="grid g2">
+      {% for f in view.bools %}
+      <label class="toggle"><input type="checkbox" name="{{ f.field }}" {{ 'checked' if f.checked }}> {{ f.label }}</label>
+      {% endfor %}
+    </div>
+    <h3 style="margin-top:18px">Termos barrados automaticamente</h3>
+    <div class="grid g2">
+      {% for label, key in [('Títulos','block_title'),('Domínios','block_domain'),('Trechos da URL','block_path')] %}
+      {% set f = view[key] %}
+      <div class="field"><label>{{ label }}</label>
+        <textarea name="{{ f.field }}" style="min-height:110px">{{ f.text }}</textarea>
+        <div class="hint">um por linha</div></div>
+      {% endfor %}
+    </div>
+    <div class="hint">Dica: use a aba <b>Calibração</b> para marcar itens recebidos como irrelevantes e bloquear a fonte ou o domínio.</div>
+  </div>
+</details>
+
+<details>
+  <summary>🔑 Palavras-chave e consultas <span class="hint">um termo por linha, até 30 por grupo</span></summary>
+  <div class="body">
+    {% for g in view.groups %}
+    <details>
+      <summary>{{ g.label }} <span class="hint">{{ g.count }}/{{ g.max }} termos</span></summary>
+      <div class="body"><textarea name="{{ g.field }}">{{ g.text }}</textarea>
+        <div class="hint">Cada linha vira um termo. Máx. {{ g.max }} termos, {{ 120 }} caracteres por termo.</div>
+      </div>
+    </details>
+    {% endfor %}
+  </div>
+</details>
+
+<details>
+  <summary>📡 Fontes <span class="hint">ligar/desligar coletores</span></summary>
+  <div class="body grid g2">
+    {% for s in view.sources %}
+    <label class="toggle"><input type="checkbox" name="{{ s.field }}" {{ 'checked' if s.enabled }}>
+      {{ s.name }} <span class="hint">({{ s.type or 'api' }})</span></label>
+    {% endfor %}
+  </div>
+</details>
+
+<div class="row" style="margin-top:22px">
+  <button class="btn primary" type="submit">💾 Salvar ajustes</button>
+</div>
+</form>
+
+<div class="card" style="margin-top:14px">
+  <div class="row spread">
+    <div><h3>🕒 Aplicar agenda ao timer</h3>
+      <div class="hint">Salve os ajustes primeiro; depois atualize o systemd com a nova frequência.</div></div>
+    <form method="post" action="{{ url_for('aplicar_agenda') }}" data-confirm="Atualizar o timer systemd com a agenda salva?">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit">Aplicar agenda</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

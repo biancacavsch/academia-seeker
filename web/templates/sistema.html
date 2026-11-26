@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block title %}Sistema{% endblock %}
+{% block content %}
+<div class="top">
+  <div><h1>Sistema</h1><div class="sub">Saúde do Pi e controle da coleta.</div></div>
+  <div class="row">
+    <span class="pill {{ 'ok' if state=='inactive' else ('warn' if state in ('active','activating') else 'bad') }}">
+      <i class="dot"></i> {{ state }}</span>
+    <form method="post" action="{{ url_for('rodar') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn primary" {{ 'disabled' if state in ('active','activating') }}>▶ Rodar agora</button>
+    </form>
+    {% if state in ('active','activating') %}
+    <form method="post" action="{{ url_for('parar') }}" data-confirm="Interromper a coleta em andamento?">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn danger">■ Parar</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="card"><div class="kpi">{{ info.mem.available or '—' }}</div><div class="kpi-label">RAM livre (MB)</div>
+    <div class="hint">de {{ info.mem.total or '—' }} MB · swap {{ info.mem.swap_free or '—' }}/{{ info.mem.swap_total or '—' }} MB</div></div>
+  <div class="card"><div class="kpi">{{ info.disk.free or '—' }}</div><div class="kpi-label">Disco livre (GB)</div>
+    <div class="hint">{{ info.disk.pct or 0 }}% usado</div>
+    <div class="bar"><i style="width:{{ info.disk.pct or 0 }}%"></i></div></div>
+  <div class="card"><div class="kpi" style="font-size:20px">{{ timer.next[:16] if timer.next else '—' }}</div>
+    <div class="kpi-label">Próxima execução</div><div class="hint">{{ schedule }}</div></div>
+  <div class="card"><div class="kpi" style="font-size:20px">{{ info.commit }}</div><div class="kpi-label">Commit atual</div>
+    <div class="hint">{{ info.now }}</div></div>
+</div>
+
+<div class="grid g2" style="margin-top:16px">
+  <div class="card">
+    <h2>Log da última rodada</h2>
+    <div class="hint" style="margin-bottom:10px">{{ log_name }}</div>
+    {% include "log_partial.html" %}
+  </div>
+  <div class="card">
+    <h2>Serviços vizinhos</h2>
+    <table><tbody>
+      {% for n in neighbors %}
+      <tr><td><code>{{ n.unit }}</code></td>
+        <td><span class="pill {{ 'ok' if n.state=='active' else 'dim' }}">{{ n.state }}</span></td></tr>
+      {% endfor %}
+    </tbody></table>
+    <div class="hint" style="margin-top:12px">Este painel nunca altera CasaOS, Pi-hole ou Trilium — apenas lê o estado.</div>
+  </div>
+</div>
+{% endblock %}

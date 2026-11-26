@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block title %}Visão geral{% endblock %}
+{% block content %}
+<div class="top">
+  <div><h1>Visão geral</h1><div class="sub">Tudo que o Pi está acompanhando, num só lugar.</div></div>
+  <div class="row">
+    <span class="pill {{ 'ok' if state=='inactive' else ('warn' if state in ('active','activating') else 'bad') }}">
+      <i class="dot"></i> {{ {'inactive':'parado','active':'rodando','activating':'iniciando','failed':'falhou','unknown':'desconhecido'}.get(state,state) }}
+    </span>
+    <form method="post" action="{{ url_for('rodar') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn primary" type="submit" {{ 'disabled' if state in ('active','activating') }}>▶ Rodar agora</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="card"><div class="kpi">{{ jobs.total_items }}</div><div class="kpi-label">Vagas no banco</div>
+    <div class="hint">{{ jobs.alerted }} alertadas · {{ jobs.unalerted }} pendentes</div></div>
+  <div class="card"><div class="kpi">{{ acad.total_items }}</div><div class="kpi-label">Itens acadêmicos</div>
+    <div class="hint">{{ acad.alerted }} alertados · {{ acad.unalerted }} pendentes</div></div>
+  <div class="card"><div class="kpi">{{ timer.next[:10] if timer.next else '—' }}</div><div class="kpi-label">Próxima rodada</div>
+    <div class="hint">timer {{ 'ativo' if timer.active else 'desativado' }}</div></div>
+  <div class="card"><div class="kpi">{{ precision|length }}</div><div class="kpi-label">Fontes avaliadas</div>
+    <div class="hint">precisão vem da sua revisão</div></div>
+</div>
+
+<div class="grid g2" style="margin-top:16px">
+  <div class="card">
+    <div class="row spread"><h2>Atividade recente</h2><a href="{{ url_for('items', db='academic') }}">ver todos →</a></div>
+    {% if recent %}
+    <table><tbody>
+      {% for item, alerted, kind in recent %}
+      <tr><td><span class="tag {{ 'track' if kind!='vaga' else 'score' }}">{{ kind }}</span>
+        <a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title[:78] }}</a>
+        <div class="hint">{{ item.source }} · score {{ item.score }}{{ ' · ✓ enviado' if alerted }}</div></td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}<div class="empty">Nada coletado ainda. Use “Rodar agora”.</div>{% endif %}
+  </div>
+  <div class="card">
+    <h2>Prazos chegando</h2>
+    {% if deadlines %}
+    <table><tbody>
+      {% for item in deadlines %}
+      <tr><td><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title[:72] }}</a>
+        <div class="hint">{{ item.venue or item.source }} ·
+          {{ item.submission_deadline.strftime('%d/%m/%Y') if item.submission_deadline else 'prazo a confirmar' }}</div></td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}<div class="empty">Nenhum prazo nos próximos 30 dias.</div>{% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="row spread"><h2>Agenda & calibração</h2>
+    <a class="btn sm" href="{{ url_for('ajustes') }}">Alterar ajustes</a></div>
+  <div class="row">
+    <span class="pill dim">mode: {{ schedule.get('mode','weekly') }}</span>
+    <span class="pill dim">dia: {{ schedule.get('weekday','sun') }}</span>
+    <span class="pill dim">hora: {{ schedule.get('time','03:17') }}</span>
+    <span class="pill dim">páginas: {{ 40 if not schedule else 'ver ajustes' }}</span>
+  </div>
+  <div class="hint">Alterações de keywords, limites e agenda são salvas sem tocar no <code>config.yaml</code> versionado.</div>
+</div>
+{% endblock %}

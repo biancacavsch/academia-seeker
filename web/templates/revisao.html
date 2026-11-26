@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block title %}Calibração{% endblock %}
+{% block content %}
+<div class="top">
+  <div><h1>Calibração</h1>
+    <div class="sub">Fila de itens entre o digest ({{ min_digest }}) e o alerta ({{ min_alert }}). Marque o que presta.</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2>Precisão por fonte</h2>
+  {% if precision %}
+  <table><thead><tr><th>Fonte</th><th>Alertados</th><th>✓ Relevantes</th><th>✗ Irrelevantes</th><th>Precisão</th></tr></thead>
+  <tbody>
+    {% for p in precision %}
+    <tr><td>{{ p.source }}</td><td>{{ p.alerted }}</td><td>{{ p.relevant }}</td><td>{{ p.irrelevant }}</td>
+      <td>{{ p.precision if p.precision is not none else '—' }}%</td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% else %}<div class="empty">Ainda não há feedback. Marque alguns itens abaixo.</div>{% endif %}
+</div>
+
+<div class="card pad0">
+{% if rows %}
+<table>
+  <thead><tr><th style="width:58%">Item</th><th>Fonte</th><th>Score</th><th style="width:290px">Decisão</th></tr></thead>
+  <tbody>
+  {% for item, alerted in rows %}
+    <tr>
+      <td><a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+        <div class="hint">{{ item.source }} · {{ item.track or item.category }}
+          {% for kw in item.matched_keywords[:3] %}<span class="tag">{{ kw }}</span>{% endfor %}</div></td>
+      <td><span class="tag">{{ item.source }}</span></td>
+      <td><span class="tag score">{{ item.score }}</span></td>
+      <td>
+        <form method="post" class="row">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="url_hash" value="{{ item.url_hash }}">
+          <select name="label" style="width:auto;flex:1">
+            <option value="relevant">✓ Relevante</option>
+            <option value="irrelevant">✗ Irrelevante</option>
+            <option value="block_domain">🚫 Bloquear domínio</option>
+            <option value="block_source">🚫 Bloquear fonte</option>
+          </select>
+          <button class="btn sm primary" type="submit">Salvar</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<div class="empty">Nada na fila agora. Ajuste os limiares em Ajustes para ver mais itens.</div>{% endif %}
+</div>
+{% endblock %}

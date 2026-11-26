@@ -1,0 +1,3 @@
+# Instalar em /etc/sudoers.d/academia-seeker-ctl com chmod 440
+# Nunca liberar shell arbitrário: apenas o helper com allowlist.
+bianca ALL=(root) NOPASSWD: /usr/local/bin/academia-seeker-ctl
