@@ -220,23 +220,29 @@ sudo systemctl status academia-seeker-web.service --no-pager
 |---|---|
 | Visão geral | contadores, status, próxima rodada, **Rodar agora**, prazos |
 | Acadêmico / Vagas | busca, filtros, paginação, export CSV, motivos do score |
-| Calibração | fila de revisão: relevante / irrelevante / bloquear domínio / bloquear fonte; precisão por fonte |
-| Levantamentos acadêmicos | criar/editar/excluir/ativar perfis próprios (ex.: "Patrimônio e história"), keywords, fontes, limites e filtros por perfil |
+| Calibração | fila de revisão: relevante / irrelevante / bloquear domínio / bloquear fonte; tabela "Precisão por fonte" (— = ainda sem feedback) |
+| Levantamentos acadêmicos | criar/editar/excluir/ativar perfis próprios, keywords, fontes, limites, filtros e **e-mail de destino** por perfil |
 | Levantamentos profissionais | mesmas possibilidades, isolados do escopo acadêmico (vagas/estágios) |
-| Ajustes gerais | parâmetros globais e agenda do timer (keywords, páginas, pausa, fontes, gate) |
+| Configurações | seções separadas: acadêmica, profissional, comum e agenda do timer |
 | Sistema | RAM/swap/disco, commit, log ao vivo, health de CasaOS/Pi-hole/Trilium/nginx |
 
 ### 9.2.1 Levantamentos (perfis)
 
-- Cada escopo tem seus próprios levantamentos; só o **ativo** roda na próxima
-  coleta (`academic collect` / `jobs collect`). A troca é feita em **Ativar**.
+- Cada levantamento tem interesses, consultas, fontes, limites e **e-mail de
+  destino** próprios. **Todos os levantamentos ligados rodam** na coleta; o
+  campo **Ativo** só escolhe qual aparece como padrão ao abrir a tela.
+- Em branco no campo **E-mail de destino** = usar o e-mail global (`TO_EMAIL`).
+  Preencha, por exemplo, `namorada@example.com` no levantamento
+  **Patrimônio e história** para que esses alertas não cheguem a você.
+- Edite qualquer perfil clicando em **Editar** na lista; a configuração exibida
+  e salva é sempre a do perfil selecionado, não a do ativo.
 - Cada item é gravado com `survey_id`; os resultados filtram por levantamento.
 - O perfil `principal` herda o `config.yaml` e não pode ser excluído.
-- O perfil **Patrimônio e história** já vem criado no acadêmico. Ative-o na UI
-  quando quiser que a namorada receba resultados desse escopo.
-- CLI: `python -m main academic collect --survey patrimonio-historia`.
+- CLI: `python -m main academic collect --survey patrimonio-historia` e
+  `python -m main academic alert --channel email --survey patrimonio-historia`
+  (use `--email` para sobrescrever o destinatário numa execução pontual).
 - Execução manual padrão continua `sudo systemctl start academia-seeker.service`
-  (usa os levantamentos ativos de cada escopo).
+  (roda todos os levantamentos ligados, cada um com seu e-mail).
 
 ### 9.2.2 Limite rígido de 30 termos
 

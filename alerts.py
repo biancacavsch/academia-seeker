@@ -20,7 +20,8 @@ class AlertManager:
         self.email_cfg = CONFIG["alerts"].get("email", {})
         self._bot = None
 
-    def send_alerts(self, items: List[BaseItem], channel: str = "both") -> set:
+    def send_alerts(self, items: List[BaseItem], channel: str = "both",
+                    to_email: str = "") -> set:
         """Envia alertas. Retorna o set de url_hash que FALHARAM enviar.
 
         O chamador só marca como alertado o que não está nesse set — caso
@@ -36,7 +37,7 @@ class AlertManager:
             failed |= asyncio.run(self._send_telegram(items))
 
         if channel in ("email", "both") and self.email_cfg.get("enabled"):
-            self._send_email(items)
+            self._send_email(items, to_email=to_email)
 
         return failed
 
@@ -80,13 +81,14 @@ class AlertManager:
             logger.error(f"{len(failed)} alertas do Telegram não enviados")
         return failed
 
-    def _send_email(self, items: List[BaseItem]):
+    def _send_email(self, items: List[BaseItem], to_email: str = ""):
         host = self.email_cfg.get("smtp_host")
         port = self.email_cfg.get("smtp_port", 587)
         user = self.email_cfg.get("smtp_user")
         password = self.email_cfg.get("smtp_pass")
         from_email = self.email_cfg.get("from_email")
-        to_email = self.email_cfg.get("to_email")
+        # Destinatário do levantamento tem prioridade; vazio usa o global.
+        to_email = (to_email or "").strip() or self.email_cfg.get("to_email")
 
         if not all([host, port, user, password, from_email, to_email]):
             logger.warning("Email credentials not fully configured")

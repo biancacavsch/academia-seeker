@@ -144,6 +144,17 @@ def parse_terms(text: str) -> list[str]:
     return out
 
 
+def _field_scope(section: str, key: str = "") -> str:
+    """Classifica um campo para a seção Acadêmica/Profissional/Comum."""
+    if section in ("estagio_search", "empresas_alvo"):
+        return "professional"
+    if section == "academic_search":
+        return "academic"
+    if key in ("estagio", "interests", "exclude_areas"):
+        return "professional"
+    return "both"
+
+
 def editable_view() -> dict:
     """Config efetiva + metadados para montar os formulários."""
     cfg = load_config()
@@ -155,6 +166,7 @@ def editable_view() -> dict:
         terms = value.get(key, []) or []
         groups.append({
             "label": label, "field": f"kw:{section}:{sub or ''}:{key}",
+            "scope": _field_scope(section, key),
             "terms": terms, "text": "\n".join(terms),
             "count": len(terms), "max": MAX_TERMS,
         })
@@ -163,12 +175,14 @@ def editable_view() -> dict:
         raw = _dig(cfg, f"{section}.{key}")
         numbers.append({
             "label": label, "field": f"num:{section}:{key}",
+            "scope": _field_scope(section),
             "value": raw, "min": lo, "max": hi, "step": step,
         })
     bools = []
     for label, section, key in BOOL_FIELDS:
         bools.append({
             "label": label, "field": f"bool:{section}:{key}",
+            "scope": _field_scope(section, key),
             "checked": bool(_dig(cfg, f"{section}.{key}")),
         })
     selects = []
@@ -178,6 +192,7 @@ def editable_view() -> dict:
             val = [val]
         selects.append({
             "label": label, "field": f"sel:{section}:{key}",
+            "scope": _field_scope(section),
             "options": options, "selected": val,
         })
     sources = []
@@ -189,6 +204,7 @@ def editable_view() -> dict:
                 "kind": kind, "name": src["name"],
                 "enabled": bool(src.get("enabled")),
                 "type": src.get("type", ""),
+                "scope": "academic" if kind == "academic_sources" else "professional",
                 "field": f"src:{kind}:{src['name']}",
             })
     gate = cfg.get("relevance", {}).get("opportunity_gate", {}) or {}

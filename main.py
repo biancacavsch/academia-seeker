@@ -105,8 +105,12 @@ def run_academic_collection(store: ItemStore, verbose: bool = False,
 
 
 def run_alerts(store: ItemStore, channel: str = "both", category: str = None,
-               kind: str = None, config: dict = None, survey_id: str = ""):
-    """Envia alertas para itens não alertados acima do threshold."""
+               kind: str = None, config: dict = None, survey_id: str = "",
+               to_email: str = ""):
+    """Envia alertas para itens não alertados acima do threshold.
+
+    `to_email` é o destinatário do levantamento (vazio = e-mail global).
+    """
     cfg = config or CONFIG
     min_score = cfg["filters"]["min_score_alert"]
     unalerted = store.get_unalerted_items(min_score=min_score, category=category,
@@ -124,7 +128,11 @@ def run_alerts(store: ItemStore, channel: str = "both", category: str = None,
                                       -i.score))
 
     alert_mgr = AlertManager()
-    failed = alert_mgr.send_alerts(unalerted, channel=channel) or set()
+    if to_email:
+        failed = alert_mgr.send_alerts(unalerted, channel=channel,
+                                       to_email=to_email) or set()
+    else:
+        failed = alert_mgr.send_alerts(unalerted, channel=channel) or set()
 
     try:
         from feedback import get_feedback_store
@@ -526,6 +534,11 @@ def _resolve_survey(scope: str, requested: str = None) -> tuple[str, dict]:
     return sid, cfg
 
 
+def _survey_email(scope: str, sid: str) -> str:
+    from surveys import survey_email
+    return survey_email(scope, sid)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Job & Academic Pipeline - Vagas remotas + CFPs/Eventos em Humanidades Digitais, Filosofia da Tecnologia, Divulgação Científica",
@@ -556,6 +569,7 @@ Comandos principais:
     jobs_alert = jobs_sub.add_parser("alert", help="Envia alertas de vagas")
     jobs_alert.add_argument("--channel", choices=["telegram", "email", "both"], default="both")
     jobs_alert.add_argument("--survey", help="ID do levantamento profissional")
+    jobs_alert.add_argument("--email", default="", help="Sobrescreve o e-mail de destino do levantamento")
     jobs_digest = jobs_sub.add_parser("digest", help="Mostra digest de vagas")
     jobs_digest.add_argument("-d", "--days", type=int, default=7)
     jobs_digest.add_argument("--min-score", type=float)
@@ -569,6 +583,7 @@ Comandos principais:
     academic_alert = academic_sub.add_parser("alert", help="Envia alertas de CFPs/eventos")
     academic_alert.add_argument("--channel", choices=["telegram", "email", "both"], default="both")
     academic_alert.add_argument("--survey", help="ID do levantamento acadêmico")
+    academic_alert.add_argument("--email", default="", help="Sobrescreve o e-mail de destino do levantamento")
     academic_digest = academic_sub.add_parser("digest", help="Mostra digest de CFPs/eventos")
     academic_digest.add_argument("-d", "--days", type=int, default=7)
     academic_digest.add_argument("--min-score", type=float)
@@ -618,7 +633,8 @@ Comandos principais:
                 new_jobs = run_job_collection(store, args.verbose, survey_cfg, sid)
                 console.print(f"[green]Coleta finalizada: {len(new_jobs)} vagas novas[/green]")
             elif args.jobs_command == "alert":
-                run_alerts(store, args.channel, "job", config=survey_cfg, survey_id=sid)
+                run_alerts(store, args.channel, "job", config=survey_cfg, survey_id=sid,
+                           to_email=args.email or _survey_email("professional", sid))
             elif args.jobs_command == "digest":
                 show_digest(store, args.days, args.min_score, "job")
 
@@ -629,7 +645,8 @@ Comandos principais:
                 new_items = run_academic_collection(store, args.verbose, survey_cfg, sid)
                 console.print(f"[green]Coleta finalizada: {len(new_items)} itens novos[/green]")
             elif args.academic_command == "alert":
-                run_alerts(store, args.channel, kind="academic", config=survey_cfg, survey_id=sid)
+                run_alerts(store, args.channel, kind="academic", config=survey_cfg, survey_id=sid,
+                           to_email=args.email or _survey_email("academic", sid))
             elif args.academic_command == "digest":
                 show_academic_digest(store, args.days, args.min_score)
             elif args.academic_command == "deadlines":

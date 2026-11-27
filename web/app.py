@@ -95,15 +95,18 @@ def create_app() -> Flask:
         edit_id = request.args.get("editar", "")
         success = True
         if request.method == "POST":
+            action = request.form.get("action", "save")
             success, errors = survey_forms.apply_form(request.form, scope)
             for e in errors:
                 flash(e, "ok" if success else "error")
             if success:
+                if action == "activate":
+                    flash(f"Levantamento '{request.form.get('survey_id', '')}' ativado.", "ok")
                 return redirect(url_for("levantamentos", scope=scope))
         surveys = list_surveys(scope)
         active = next((s for s in surveys if s["active"]), surveys[0] if surveys else None)
         current = next((s for s in surveys if s["id"] == edit_id), active)
-        view = survey_forms.editable_paths(scope)
+        view = survey_forms.editable_paths(scope, sid=current["id"] if current else "")
         title = "Levantamentos acadêmicos" if scope == "academic" else "Levantamentos profissionais"
         return render_template(
             "levantamentos.html", scope=scope, title=title, surveys=surveys,
@@ -262,6 +265,7 @@ def create_app() -> Flask:
         rows.sort(key=lambda r: -r[0].score)
         return render_template("revisao.html", rows=rows[:40],
                                precision=fb.precision_by_source(),
+                               has_feedback=bool(fb.labels()),
                                min_alert=min_alert, min_digest=min_digest)
 
     return app

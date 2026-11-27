@@ -7,15 +7,23 @@
 
 <div class="card" style="margin-bottom:16px">
   <h2>Precisão por fonte</h2>
+  <div class="hint" style="margin-bottom:12px">
+    Mostra o histórico de decisões e o feedback que você marca na tabela abaixo.
+    <b>Alertados</b> = itens enviados por e-mail; <b>Decisões</b> = itens que o pipeline avaliou.
+    <b>—</b> em Precisão é normal enquanto você não marca itens como relevantes/irrelevantes:
+    sem feedback não há como calcular a porcentagem.
+  </div>
   {% if precision %}
-  <table><thead><tr><th>Fonte</th><th>Alertados</th><th>✓ Relevantes</th><th>✗ Irrelevantes</th><th>Precisão</th></tr></thead>
+  <table><thead><tr><th>Fonte</th><th>Alertados</th><th>Decisões</th><th>✓ Relevantes</th><th>✗ Irrelevantes</th><th>Precisão</th></tr></thead>
   <tbody>
     {% for p in precision %}
-    <tr><td>{{ p.source }}</td><td>{{ p.alerted }}</td><td>{{ p.relevant }}</td><td>{{ p.irrelevant }}</td>
-      <td>{{ p.precision if p.precision is not none else '—' }}%</td></tr>
+    <tr><td>{{ p.source }}</td><td>{{ p.alerted }}</td><td>{{ p.total }}</td><td>{{ p.relevant }}</td><td>{{ p.irrelevant }}</td>
+      <td>{% if p.precision is not none %}<span class="pill ok">{{ p.precision }}%</span>
+          {% else %}<span class="hint">— sem feedback</span>{% endif %}</td></tr>
     {% endfor %}
   </tbody></table>
-  {% else %}<div class="empty">Ainda não há feedback. Marque alguns itens abaixo.</div>{% endif %}
+  {% if not has_feedback %}<div class="hint" style="margin-top:12px">Nenhum item marcado até agora. Use a tabela abaixo para calibrar.</div>{% endif %}
+  {% else %}<div class="empty">Ainda não há decisões registradas. Marque alguns itens abaixo.</div>{% endif %}
 </div>
 
 <div class="card pad0">

@@ -30,6 +30,7 @@ MAX_TERMS = 30
 MAX_SURVEYS = 12
 SCOPES = ("academic", "professional")
 DEFAULT_IDS = {"academic": "principal", "professional": "principal"}
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 TERM_PATHS = {
     "academic": (
         "academic_search.queries.bolsas_pt", "academic_search.queries.bolsas_en",
@@ -91,6 +92,20 @@ def _write_yaml(path: Path, data: dict) -> None:
             Path(tmp).unlink()
 
 
+def normalize_email(raw: str) -> str | None:
+    """E-mail(s) de destino do levantamento. '' = usar o e-mail global.
+
+    Aceita um ou mais endereços separados por vírgula/ponto-e-vírgula.
+    Retorna None quando algum endereço é inválido.
+    """
+    parts = [p.strip().lower() for p in str(raw or "").replace(";", ",").split(",")]
+    parts = [p for p in parts if p]
+    for address in parts:
+        if not EMAIL_RE.match(address):
+            return None
+    return ",".join(dict.fromkeys(parts))[:200]
+
+
 def defaults() -> dict[str, dict]:
     """Perfil inicial de cada escopo (herda todo o config.yaml)."""
     return {
@@ -99,6 +114,7 @@ def defaults() -> dict[str, dict]:
             "name": "Meu levantamento acadêmico",
             "scope": "academic",
             "description": "Humanidades digitais, divulgação científica e filosofia da tecnologia.",
+            "email": "",
             "enabled": True,
             "config": {},
         },
@@ -107,6 +123,7 @@ def defaults() -> dict[str, dict]:
             "name": "Meu levantamento profissional",
             "scope": "professional",
             "description": "Vagas e estágios remotos na minha área.",
+            "email": "",
             "enabled": True,
             "config": {},
         },
@@ -153,6 +170,7 @@ def list_surveys(scope: str) -> list[dict]:
             "id": sid,
             "name": str(data.get("name") or sid)[:80],
             "description": str(data.get("description") or "")[:240],
+            "email": str(data.get("email") or "")[:200],
             "scope": scope,
             "enabled": bool(data.get("enabled", True)),
             "active": sid == active,
@@ -182,6 +200,7 @@ def get_survey(scope: str, sid: str, *, with_config: bool = False) -> dict | Non
         "id": sid,
         "name": str(data.get("name") or sid)[:80],
         "description": str(data.get("description") or "")[:240],
+        "email": str(data.get("email") or "")[:200],
         "scope": scope,
         "enabled": bool(data.get("enabled", True)),
         "active": active_ids().get(scope) == sid,
@@ -236,13 +255,16 @@ def validate_config(config: dict, scope: str) -> tuple[dict, list[str]]:
 
 
 def save_survey(scope: str, sid: str, name: str, description: str,
-                enabled: bool, config: dict) -> tuple[dict | None, list[str]]:
+                enabled: bool, config: dict, email: str = "") -> tuple[dict | None, list[str]]:
     """Cria ou atualiza um levantamento. Retorna (perfil salvo, erros)."""
     if scope not in SCOPES:
         return None, ["escopo inválido"]
     sid = _safe_id(sid)
     if not sid:
         return None, ["identificador inválido"]
+    recipient = normalize_email(email)
+    if recipient is None:
+        return None, ["E-mail de destino inválido"]
     clean, errors = validate_config(config, scope)
     if errors:
         return None, errors
@@ -253,6 +275,7 @@ def save_survey(scope: str, sid: str, name: str, description: str,
         "id": sid, "scope": scope,
         "name": str(name or sid).strip()[:80] or sid,
         "description": str(description or "").strip()[:240],
+        "email": recipient,
         "enabled": bool(enabled), "config": clean,
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     })
@@ -292,3 +315,15 @@ def effective_config(scope: str | None = None, *, sid: str | None = None) -> dic
         if section in EDITABLE_SECTIONS and isinstance(payload, dict):
             cfg[section] = deep_merge(cfg.get(section, {}) or {}, payload)
     return cfg
+
+
+def enabled_surveys(scope: str) -> list[dict]:
+    """Levantamentos ligados de um escopo (todos rodam na semana)."""
+    return [s for s in list_surveys(scope) if s.get("enabled", True)]
+
+
+def survey_email(scope: str, sid: str | None = None) -> str:
+    """Destinatário do levantamento; '' usa o e-mail global do config."""
+    target = _safe_id(sid) if sid else active_ids().get(scope)
+    survey = get_survey(scope, target or "")
+    return (survey or {}).get("email", "") or ""

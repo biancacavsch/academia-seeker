@@ -3,7 +3,7 @@
 {% block content %}
 <div class="top">
   <div><h1>{{ title }}</h1>
-    <div class="sub">Cada levantamento tem seus próprios interesses, escopo e limites. O ativo é usado na próxima coleta.</div></div>
+    <div class="sub">Cada levantamento tem interesses, limites e e-mail próprios. Todos os levantamentos ligados rodam na próxima coleta; o ativo é apenas o padrão ao abrir esta página.</div></div>
   <a class="btn" href="{{ url_for('levantamentos', scope='academic' if scope=='professional' else 'professional') }}">
     {{ '🎓 Acadêmicos' if scope=='professional' else '💼 Profissionais' }}</a>
 </div>
@@ -19,6 +19,7 @@
             <a href="{{ url_for('levantamentos', scope=scope, editar=s.id) }}"><b>{{ s.name }}</b></a>
             <div class="hint">{{ s.id }}{% if not s.enabled %} · desligado{% endif %}</div>
             {% if s.description %}<div class="hint">{{ s.description }}</div>{% endif %}
+            {% if s.email %}<div class="hint">✉ {{ s.email }}</div>{% endif %}
           </div>
           <div class="row" style="gap:6px">
             {% if s.active %}<span class="pill ok">ativo</span>
@@ -47,31 +48,51 @@
   </div>
 
   <div class="card">
-    <h2>{{ 'Criar novo levantamento' if not (current and current.id != active.id) else 'Editando: ' ~ current.name }}</h2>
+    <h2>{{ 'Editando: ' ~ current.name if request.args.get('editar') and current else 'Criar novo levantamento' }}</h2>
     <form method="post" id="survey-form">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-      <input type="hidden" name="action" value="{{ 'save' if current and request.args.get('editar') else 'create' }}">
-      <input type="hidden" name="survey_id" value="{{ current.id if request.args.get('editar') else '' }}">
+      <input type="hidden" name="action" value="{{ 'save' if request.args.get('editar') and current else 'create' }}">
+      <input type="hidden" name="survey_id" value="{{ current.id if request.args.get('editar') and current else '' }}">
       <div class="field"><label>Nome</label>
-        <input name="survey_name" required maxlength="80" value="{{ current.name if request.args.get('editar') else '' }}" placeholder="Ex.: Patrimônio e história (namorada)"></div>
+        <input name="survey_name" required maxlength="80" value="{{ current.name if request.args.get('editar') and current else '' }}" placeholder="Ex.: Patrimônio e história (namorada)"></div>
       <div class="field"><label>Descrição</label>
-        <input name="survey_description" maxlength="240" value="{{ current.description if request.args.get('editar') else '' }}" placeholder="Interesses e escopo deste levantamento"></div>
-      <label class="toggle"><input type="checkbox" name="survey_enabled" {{ 'checked' if not current or current.enabled }}>
+        <input name="survey_description" maxlength="240" value="{{ current.description if request.args.get('editar') and current else '' }}" placeholder="Interesses e escopo deste levantamento"></div>
+      <div class="field"><label>E-mail de destino</label>
+        <input name="survey_email" type="email" maxlength="200" value="{{ current.email if request.args.get('editar') and current else '' }}" placeholder="Deixe em branco para usar o e-mail principal">
+        <div class="hint">Os alertas deste levantamento vão para este e-mail. Ex.: o levantamento da sua namorada pode ir para ela.</div></div>
+      <label class="toggle"><input type="checkbox" name="survey_enabled" {{ 'checked' if not request.args.get('editar') or not current or current.enabled }}>
         Levantamento ligado</label>
-      <div class="hint">Dica: troque o nome, desmarque termos que não são seus e ative este levantamento. Os resultados continuam separados por escopo (acadêmico/profissional).</div>
-      <button class="btn primary" style="margin-top:14px" type="submit">💾 Salvar levantamento</button>
+      <div class="hint">Todos os levantamentos ligados rodam. Use <b>Ativar</b> apenas para escolher qual aparece como padrão aqui.</div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn primary" type="submit">💾 Salvar levantamento</button>
+        {% if request.args.get('editar') %}<a class="btn" href="{{ url_for('levantamentos', scope=scope) }}">Cancelar edição</a>{% endif %}
+      </div>
     </form>
   </div>
 </div>
 
-{% set cfg_current = current %}
+<div class="card" style="margin-top:18px">
+  <div class="row spread">
+    <div><h2>Configuração de {{ current.name if current else 'levantamento' }}</h2>
+      <div class="hint">Edite os campos abaixo e salve. Cada levantamento guarda sua própria versão.</div></div>
+    {% if request.args.get('editar') and current and not current.active %}
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="activate">
+      <input type="hidden" name="survey_id" value="{{ current.id }}">
+      <button class="btn sm" type="submit">Ativar este</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
 <form method="post" id="config-form" style="margin-top:18px">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <input type="hidden" name="action" value="save">
-  <input type="hidden" name="survey_id" value="{{ current.id if request.args.get('editar') else '' }}">
-  <input type="hidden" name="survey_name" value="{{ current.name if request.args.get('editar') else '' }}">
-  <input type="hidden" name="survey_description" value="{{ current.description if request.args.get('editar') else '' }}">
-  <input type="hidden" name="survey_enabled" value="{{ 'on' if not request.args.get('editar') or current.enabled else '' }}">
+  <input type="hidden" name="survey_id" value="{{ current.id if current else 'principal' }}">
+  <input type="hidden" name="survey_name" value="{{ current.name if current else '' }}">
+  <input type="hidden" name="survey_description" value="{{ current.description if current else '' }}">
+  <input type="hidden" name="survey_email" value="{{ current.email if current else '' }}">
+  <input type="hidden" name="survey_enabled" value="{{ 'on' if not current or current.enabled else '' }}">
 
   <details open>
     <summary>🔑 Interesses, palavras-chave e consultas

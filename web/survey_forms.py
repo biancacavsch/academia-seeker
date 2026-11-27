@@ -70,9 +70,12 @@ def _paths(scope: str) -> list[str]:
     return list(TERM_PATHS.get(scope, ()))
 
 
-def editable_paths(scope: str) -> dict:
-    """Todos os campos editáveis de um escopo, com valores efetivos."""
-    sid = active_ids().get(scope)
+def editable_paths(scope: str, sid: str = "") -> dict:
+    """Campos editáveis de um levantamento, com valores efetivos.
+
+    `sid` deve ser o levantamento being edited; quando vazio usa o ativo.
+    """
+    sid = sid or active_ids().get(scope)
     cfg = effective_config(scope, sid=sid)
     terms = []
     for path in _paths(scope):
@@ -217,6 +220,9 @@ def apply_form(form, scope: str) -> tuple[bool, list[str]]:
     action = form.get("action", "save")
     sid_raw = form.get("survey_id", "")
     sid = sid_raw.strip().lower().replace(" ", "-")[:48]
+    if action == "save" and not sid:
+        # POSTs sem ID (ex.: abrir a página sem ?editar) editam o ativo.
+        sid = active_ids().get(scope, "principal")
     if action == "delete":
         ok, msg = delete_survey(scope, sid)
         return ok, [msg]
@@ -236,6 +242,7 @@ def apply_form(form, scope: str) -> tuple[bool, list[str]]:
         form.get("survey_description", ""),
         form.get("survey_enabled", "on") == "on",
         config,
+        form.get("survey_email", ""),
     )
     if not ok:
         return False, errs

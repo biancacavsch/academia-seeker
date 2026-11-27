@@ -5,7 +5,8 @@
 # Também pode ser rodado manualmente, a qualquer momento:
 #   sudo systemctl start academia-seeker.service
 #
-# Bancos separados (ver config.yaml storage):
+# Roda TODOS os levantamentos ligados de cada escopo, cada um com seu próprio
+# config e destinatário de e-mail (surveys/*.yaml). Bancos separados:
 #   etapas 1-2 -> jobs.db      (vagas/estagios)
 #   etapas 3-4 -> academic.db  (bolsas/eventos/chamadas)
 # Credenciais (SMTP/Adzuna/Jooble) vem do .env, carregado por config.py.
@@ -39,36 +40,56 @@ for db in jobs.db academic.db items.db; do
 done
 find "$BACKUP_DIR" -name "*.db" -mtime +60 -delete 2>/dev/null
 
+# IDs dos levantamentos ligados (cada um tem seus interesses e e-mail).
+ACADEMIC_IDS="$("$PYTHON" -c "from surveys import enabled_surveys; print(' '.join(s['id'] for s in enabled_surveys('academic')))" 2>>"$LOG_FILE")"
+PROFESSIONAL_IDS="$("$PYTHON" -c "from surveys import enabled_surveys; print(' '.join(s['id'] for s in enabled_surveys('professional')))" 2>>"$LOG_FILE")"
+[ -n "$ACADEMIC_IDS" ] || ACADEMIC_IDS="principal"
+[ -n "$PROFESSIONAL_IDS" ] || PROFESSIONAL_IDS="principal"
+
 {
   echo "=== Pipeline semanal iniciado em $(date '+%Y-%m-%d %H:%M:%S') ==="
+  echo "Levantamentos profissionais: $PROFESSIONAL_IDS"
+  echo "Levantamentos academicos: $ACADEMIC_IDS"
 
   echo "--- [1/4] Coletando vagas ---"
-  if "$PYTHON" -m main jobs collect; then
-    echo "OK: coleta de vagas concluida"
-  else
-    echo "FALHA: coleta de vagas (codigo $?)"
-  fi
+  for sid in $PROFESSIONAL_IDS; do
+    echo ">> levantamento profissional '$sid'"
+    if "$PYTHON" -m main jobs collect --survey "$sid"; then
+      echo "OK: coleta de vagas '$sid' concluida"
+    else
+      echo "FALHA: coleta de vagas '$sid' (codigo $?)"
+    fi
+  done
 
-  echo "--- [2/4] Alertas de vagas (email) ---"
-  if "$PYTHON" -m main jobs alert --channel email; then
-    echo "OK: alertas de vagas enviados"
-  else
-    echo "FALHA: alertas de vagas (codigo $?)"
-  fi
+  echo "--- [2/4] Alertas de vagas (email de cada levantamento) ---"
+  for sid in $PROFESSIONAL_IDS; do
+    echo ">> alertas do levantamento profissional '$sid'"
+    if "$PYTHON" -m main jobs alert --channel email --survey "$sid"; then
+      echo "OK: alertas de vagas '$sid' enviados"
+    else
+      echo "FALHA: alertas de vagas '$sid' (codigo $?)"
+    fi
+  done
 
   echo "--- [3/4] Coletando CFPs/eventos ---"
-  if "$PYTHON" -m main academic collect; then
-    echo "OK: coleta academica concluida"
-  else
-    echo "FALHA: coleta academica (codigo $?)"
-  fi
+  for sid in $ACADEMIC_IDS; do
+    echo ">> levantamento academico '$sid'"
+    if "$PYTHON" -m main academic collect --survey "$sid"; then
+      echo "OK: coleta academica '$sid' concluida"
+    else
+      echo "FALHA: coleta academica '$sid' (codigo $?)"
+    fi
+  done
 
-  echo "--- [4/4] Alertas academicos (email) ---"
-  if "$PYTHON" -m main academic alert --channel email; then
-    echo "OK: alertas academicos enviados"
-  else
-    echo "FALHA: alertas academicos (codigo $?)"
-  fi
+  echo "--- [4/4] Alertas academicos (email de cada levantamento) ---"
+  for sid in $ACADEMIC_IDS; do
+    echo ">> alertas do levantamento academico '$sid'"
+    if "$PYTHON" -m main academic alert --channel email --survey "$sid"; then
+      echo "OK: alertas academicos '$sid' enviados"
+    else
+      echo "FALHA: alertas academicos '$sid' (codigo $?)"
+    fi
+  done
 
   echo "=== Pipeline semanal concluido em $(date '+%Y-%m-%d %H:%M:%S') ==="
 } >> "$LOG_FILE" 2>&1
